@@ -1,6 +1,6 @@
 The sound driver is ported from SCE:
 
-- https://github.com/TheBlad768/Sonic-Clean-Engine-S.C.E.-/tree/flamedriver
+See: https://github.com/TheBlad768/Sonic-Clean-Engine-S.C.E.-/tree/flamedriver
 
 s1disasm_git
 ============
