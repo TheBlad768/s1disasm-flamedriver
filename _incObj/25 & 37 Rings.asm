@@ -100,7 +100,7 @@ loc_9C02:
 		add.w	d5,d2		; add ring spacing value to d2
 		add.w	d6,d3		; add ring spacing value to d3
 		swap	d1
-		dbf	d1,Ring_MakeRings ; repeat for	number of rings
+		dbf	d1,Ring_MakeRings ; repeat for number of rings
 
 loc_9C0E:
 		btst	#0,(a2)
@@ -133,7 +133,7 @@ Ring_Sparkle:	; Routine 6
 Ring_Delete:	; Routine 8
 		bra.w	DeleteObject
 
-; ||||||||||||||| S U B	R O U T	I N E |||||||||||||||||||||||||||||||||||||||
+; ||||||||||||||| S U B R O U T I N E |||||||||||||||||||||||||||||||||||||||
 
 
 CollectRing:
@@ -151,18 +151,18 @@ CollectRing:
 .got100:
 		addq.b	#1,(v_lives).w	; add 1 to the number of lives you have
 		addq.b	#1,(f_lifecount).w ; update the lives counter
-		move.w	#mus_ExtraLife,d0 ; play extra life music
-		jmp	(PlaySound).l
+		move.w	#bgm_ExtraLife,d0 ; play extra life music
+		jmp	(QueueSound1).l
 ; ===========================================================================
 
 .playsnd:
-		move.w	#sfx_RingRight,d0	; play ring sound
-		jmp	(PlaySound_Special).l
+		move.w	#sfx_Ring,d0	; play ring sound
+		jmp	(QueueSound2).l
 ; End of function CollectRing
 
 ; ===========================================================================
 ; ---------------------------------------------------------------------------
-; Object 37 - rings flying out of Sonic	when he's hit
+; Object 37 - rings flying out of Sonic when he's hit
 ; ---------------------------------------------------------------------------
 
 RingLoss:
@@ -210,7 +210,12 @@ RLoss_Count:	; Routine 0
 		move.b	#3,obPriority(a1)
 		move.b	#$47,obColType(a1)
 		move.b	#8,obActWid(a1)
+	if FixBugs=0
+		; This resets the timer for all spilled rings,
+		; even if they were already close to getting deleted
+		; https://info.sonicretro.org/SCHG_How-to:Fix_Ring_Timers
 		move.b	#-1,(v_ani3_time).w
+	endif
 		tst.w	d4
 		bmi.s	.loc_9D62
 		move.w	d4,d0
@@ -238,8 +243,16 @@ RLoss_Count:	; Routine 0
 		move.w	#0,(v_rings).w	; reset number of rings to zero
 		move.b	#$80,(f_ringcount).w ; update ring counter
 		move.b	#0,(v_lifecount).w
+
+	if FixBugs
+		; Fix Ring Timers
+		; https://info.sonicretro.org/SCHG_How-to:Fix_Ring_Timers
+		moveq	#-1,d0			; Move 255 to d0
+		move.b	d0,obDelayAni(a0)	; Move d0 to new timer
+		move.b	d0,(v_ani3_time).w	; Move d0 to old timer (for animated purposes)
+	endif
 		move.w	#sfx_RingLoss,d0
-		jsr	(PlaySound_Special).l	; play ring loss sound
+		jsr	(QueueSound2).l	; play ring loss sound
 
 RLoss_Bounce:	; Routine 2
 		move.b	(v_ani3_frame).w,obFrame(a0)
@@ -260,8 +273,22 @@ RLoss_Bounce:	; Routine 2
 		neg.w	obVelY(a0)
 
 .chkdel:
+	if FixBugs
+		; Fix Ring Timers
+		; https://info.sonicretro.org/SCHG_How-to:Fix_Ring_Timers
+		subq.b	#1,obDelayAni(a0)	; Subtract 1
+		beq.w	DeleteObject		; If 0, delete
+	else
 		tst.b	(v_ani3_time).w
 		beq.s	RLoss_Delete
+	endif
+
+	if FixBugs
+		; Fix Accidental Deletion of Scattered Rings
+		; https://info.sonicretro.org/SCHG_How-to:Fix_Accidental_Deletion_of_Scattered_Rings
+		tst.w	(v_limittop2).w		; is vertical wrapping enabled?
+		bmi.w	DisplaySprite		; if so, don't delete rings by boundary
+	endif
 		move.w	(v_limitbtm2).w,d0
 		addi.w	#$E0,d0
 		cmp.w	obY(a0),d0	; has object moved below level boundary?

@@ -1,5 +1,5 @@
 ; ---------------------------------------------------------------------------
-; Object 83 - blocks that disintegrate Eggman	presses	a switch (SBZ2)
+; Object 83 - blocks that disintegrate Eggman presses a switch (SBZ2)
 ; ---------------------------------------------------------------------------
 
 FalseFloor:
@@ -39,7 +39,7 @@ FFloor_MakeBlock:
 		move.b	#$10,obActWid(a1)
 		move.b	#$10,obHeight(a1)
 		move.b	#3,obPriority(a1)
-		move.w	d5,obX(a1)	; set X	position
+		move.w	d5,obX(a1)	; set X position
 		move.w	#boss_sbz2_y+$C0,obY(a1)
 		addi.w	#$20,d5		; add $20 for next X position
 		move.b	#8,obRoutine(a1)
@@ -150,8 +150,8 @@ loc_19CC4:
 		dbf	d1,FFloor_LoopFrag ; repeat sequence 3 more times
 
 FFloor_BreakSnd:
-		move.w	#sfx_Collapse,d0
-		jsr	(PlaySound_Special).l	; play smashing sound
+		move.w	#sfx_WallSmash,d0
+		jsr	(QueueSound2).l	; play smashing sound
 		jmp	(DisplaySprite).l
 ; ===========================================================================
 FFloor_FragSpeed:dc.w $80, 0

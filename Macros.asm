@@ -3,12 +3,8 @@
 ; input: 16-bit VRAM address, control port (default is (vdp_control_port).l)
 ; ---------------------------------------------------------------------------
 
-locVRAM:	macro loc,controlport
-		if ("controlport"=="")
-		move.l	#($40000000+(((loc)&$3FFF)<<16)+(((loc)&$C000)>>14)),(vdp_control_port).l
-		else
+locVRAM:	macro loc,controlport=(vdp_control_port).l
 		move.l	#($40000000+(((loc)&$3FFF)<<16)+(((loc)&$C000)>>14)),controlport
-		endif
 		endm
 
 ; ---------------------------------------------------------------------------
@@ -66,9 +62,9 @@ fillVRAM:	macro byte,start,end
 
 clearRAM:	macro startAddress,endAddress
 	if "endAddress"<>""
-.length := (endAddress)-(startAddress)
+		.length: := (endAddress)-(startAddress)
 	else
-.length := startAddress_end-startAddress
+		.length: := startAddress_end-startAddress
 	endif
 		lea	(startAddress).w,a1
 		moveq	#0,d0
@@ -116,7 +112,7 @@ copyTilemap:	macro source,destination,width,height
 ; ---------------------------------------------------------------------------
 
 disableInts macro
-	move	#$2700,sr
+	move.w	#$2700,sr
     endm
 
 ; ---------------------------------------------------------------------------
@@ -124,7 +120,7 @@ disableInts macro
 ; ---------------------------------------------------------------------------
 
 enableInts macro
-	move	#$2300,sr
+	move.w	#$2300,sr
     endm
 
 ; ---------------------------------------------------------------------------
@@ -235,7 +231,7 @@ startZ802: macro
 ; ---------------------------------------------------------------------------
 
 disable_ints:	macro
-		move	#$2700,sr
+		move.w	#$2700,sr
 		endm
 
 ; ---------------------------------------------------------------------------
@@ -243,7 +239,27 @@ disable_ints:	macro
 ; ---------------------------------------------------------------------------
 
 enable_ints:	macro
-		move	#$2300,sr
+		move.w	#$2300,sr
+		endm
+
+; ---------------------------------------------------------------------------
+; disable display
+; ---------------------------------------------------------------------------
+
+disable_display:	macro
+		move.w	(v_vdp_buffer1).w,d0		; get buffered copy of VDP register $81
+		andi.b	#%10111111,d0			; clear bit 6 (disable display; fill with background color)
+		move.w	d0,(vdp_control_port).l		; write to VDP
+		endm
+
+; ---------------------------------------------------------------------------
+; enable display
+; ---------------------------------------------------------------------------
+
+enable_display:	macro
+		move.w	(v_vdp_buffer1).w,d0		; get buffered copy of VDP register $81
+		ori.b	#%01000000,d0			; set bit 6 (enable display)
+		move.w	d0,(vdp_control_port).l		; write to VDP
 		endm
 
 ; ---------------------------------------------------------------------------
@@ -336,11 +352,11 @@ jmi:		macro loc
 ; ---------------------------------------------------------------------------
 
 out_of_range:	macro exit,pos
-		if ("pos"<>"")
+	if ("pos"<>"")
 		move.w	pos,d0		; get object position (if specified as not obX)
-		else
+	else
 		move.w	obX(a0),d0	; get object position
-		endif
+	endif
 		andi.w	#$FF80,d0	; round down to nearest $80
 		move.w	(v_screenposx).w,d1 ; get screen position
 		subi.w	#128,d1
@@ -370,10 +386,12 @@ gotoROM:	macro
 ; ---------------------------------------------------------------------------
 
 zonewarning:	macro loc,elementsize
+    if (MOMPASS=1)
 ._end:
-		if (._end-loc)-(ZoneCount*elementsize)<>0
+	if (._end-loc)-(ZoneCount*elementsize)<>0
 		warning "Size of loc (\{(._end-loc)/elementsize}) does not match ZoneCount (\{ZoneCount})."
-		endif
+	endif
+    endif
 		endm
 
 ; ---------------------------------------------------------------------------
@@ -383,9 +401,18 @@ zonewarning:	macro loc,elementsize
 make_art_tile function addr,pal,pri,((pri&1)<<15)|((pal&3)<<13)|addr
 
 ; ---------------------------------------------------------------------------
-; sprite mappings and DPLCs macros
+; incbin compatibility macro for AS
 ; ---------------------------------------------------------------------------
 
-SonicMappingsVer = 1
-SonicDplcVer = 1
-		include	"_maps/MapMacros.asm"
+incbin:		macro path
+		binclude path
+		endm
+
+; ---------------------------------------------------------------------------
+; Macro to binclude something with an end marker
+; ---------------------------------------------------------------------------
+
+bincludeEndMarker macro path,{INTLABEL},{GLOBALSYMBOLS}
+__LABEL__:	binclude	path
+__LABEL___end:
+	endm

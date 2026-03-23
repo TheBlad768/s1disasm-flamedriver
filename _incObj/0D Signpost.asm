@@ -36,10 +36,10 @@ Sign_Touch:	; Routine 2
 		move.w	(v_player+obX).w,d0
 		sub.w	obX(a0),d0
 		bcs.s	.notouch
-		cmpi.w	#$20,d0		; is Sonic within $20 pixels of	the signpost?
+		cmpi.w	#$20,d0		; is Sonic within $20 pixels of the signpost?
 		bhs.s	.notouch	; if not, branch
-		move.w	#sfx_SignpostRotation,d0
-		jsr	(PlaySound_Special).l	; play signpost sound
+		move.w	#sfx_Signpost,d0
+		jsr	(QueueSound2).l	; play signpost sound
 		clr.b	(f_timecount).w	; stop time counter
 		move.w	(v_limitright2).w,(v_limitleft2).w ; lock screen position
 		addq.b	#2,obRoutine(a0)
@@ -98,7 +98,7 @@ Sign_SparkPos:	dc.b -$18,-$10		; x-position, y-position
 ; ===========================================================================
 
 Sign_SonicRun:	; Routine 6
-		tst.w	(v_debuguse).w	; is debug mode	on?
+		tst.w	(v_debuguse).w	; is debug mode on?
 		bne.w	locret_ECEE	; if yes, branch
 	if FixBugs
 		; This function's checks are a mess, creating an edgecase where it's
@@ -115,7 +115,7 @@ Sign_SonicRun:	; Routine 6
 	endif
 		move.b	#1,(f_lockctrl).w ; lock controls
 		move.w	#btnR<<8,(v_jpadhold2).w ; make Sonic run to the right
-	if ~~FixBugs
+	if FixBugs=0
 loc_EC70:
 		tst.b	(v_player+obID).w	; Check if Sonic's object has been deleted (because he entered the giant ring)
 		beq.s	loc_EC86
@@ -131,10 +131,10 @@ loc_EC86:
 
 
 ; ---------------------------------------------------------------------------
-; Subroutine to	set up bonuses at the end of an	act
+; Subroutine to set up bonuses at the end of an act
 ; ---------------------------------------------------------------------------
 
-; ||||||||||||||| S U B	R O U T	I N E |||||||||||||||||||||||||||||||||||||||
+; ||||||||||||||| S U B R O U T I N E |||||||||||||||||||||||||||||||||||||||
 
 
 GotThroughAct:
@@ -165,8 +165,8 @@ GotThroughAct:
 		move.w	(v_rings).w,d0	; load number of rings
 		mulu.w	#10,d0		; multiply by 10
 		move.w	d0,(v_ringbonus).w ; set ring bonus
-		move.w	#mus_GotThrough,d0
-		jsr	(PlaySound).l	; play "Sonic got through" music
+		move.w	#bgm_GotThrough,d0
+		jsr	(QueueSound1).l	; play "Sonic got through" music
 
 locret_ECEE:
 		rts

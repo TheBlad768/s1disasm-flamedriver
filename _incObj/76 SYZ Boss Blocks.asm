@@ -43,7 +43,7 @@ BossBlock_MakeBlock:
 		dbf	d6,BossBlock_Loop	; repeat sequence 9 more times
 
 BossBlock_ExitLoop:
-		rts	
+		rts
 ; ===========================================================================
 
 BossBlock_Action:	; Routine 2
@@ -95,7 +95,7 @@ loc_19762:	; Routine 4
 BossBlock_Delete:
 		jmp	(DeleteObject).l
 
-; ||||||||||||||| S U B	R O U T	I N E |||||||||||||||||||||||||||||||||||||||
+; ||||||||||||||| S U B R O U T I N E |||||||||||||||||||||||||||||||||||||||
 
 
 BossBlock_Break:
@@ -138,8 +138,8 @@ loc_197AA:
 		dbf	d1,BossBlock_LoopFrag ; repeat sequence 3 more times
 
 loc_197D4:
-		move.w	#sfx_Collapse,d0
-		jmp	(PlaySound_Special).l	; play smashing sound
+		move.w	#sfx_WallSmash,d0
+		jmp	(QueueSound2).l	; play smashing sound
 ; End of function BossBlock_Break
 
 ; ===========================================================================
