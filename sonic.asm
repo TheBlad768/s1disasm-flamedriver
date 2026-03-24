@@ -2029,6 +2029,7 @@ Sega_GotoTitle:
 		move.b	#2,(v_vbla_routine).w
 		bsr.w	WaitForVBla
 
+		; exit
 		move.b	#id_Title,(v_gamemode).w ; go to title screen
 		rts
 ; ===========================================================================
