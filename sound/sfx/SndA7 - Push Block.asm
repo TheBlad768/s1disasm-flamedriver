@@ -1,5 +1,5 @@
 SndA7_Push_Block_Header:
-	smpsHeaderStartSong 1
+	smpsHeaderStartSong 3
 	smpsHeaderVoice     SndA7_Push_Block_Voices
 	smpsHeaderTempoSFX  $01
 	smpsHeaderChanSFX   $01
@@ -9,8 +9,7 @@ SndA7_Push_Block_Header:
 ; FM4 Data
 SndA7_Push_Block_FM4:
 	smpsSetvoice        $00
-	dc.b	nD1, $07, nRst, $02, nD1, $06, nRst, $10
-	smpsClearPush
+	dc.b	nD1, $07, nRst, $02, nD1, $06, nRst
 	smpsStop
 
 SndA7_Push_Block_Voices:
