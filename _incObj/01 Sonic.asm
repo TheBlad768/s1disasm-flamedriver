@@ -200,8 +200,8 @@ Sonic_Display:
 	.notunderwater:
 	endif
 		move.b	#0,(v_shoes).w				; cancel speed shoes
-		move.w	#bgm_Slowdown,d0			; resume music...
-		jmp	(QueueSound1).l				; ...at normal speed
+		moveq	#0,d0					; resume music...
+		jmp	(Change_Music_Tempo).w			; ...at normal speed
 ; ===========================================================================
 
 ; Obj01_ExitChk:
