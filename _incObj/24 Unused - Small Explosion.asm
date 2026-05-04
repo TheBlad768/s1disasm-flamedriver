@@ -29,7 +29,7 @@ UnkExpl_Main:	; Routine 0
 		move.b	#24/2,obActWid(a0)			; set sprite display width
 		move.b	#10-1,obTimeFrame(a0)			; set frame interval to 10 frames
 		move.b	#0,obFrame(a0)				; start at frame 0
-		move.w	#sfx_A5,d0				; (this sfx is also unused)
+		move.w	#sfx_UnkA5,d0				; (this sfx is also unused)
 		jsr	(QueueSound2).l				; play sound
 ; ---------------------------------------------------------------------------
 

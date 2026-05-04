@@ -4,7 +4,7 @@ SndB6_Spikes_Move_Header:
 	smpsHeaderTempoSFX  $01
 	smpsHeaderChanSFX   $01
 
-	smpsHeaderSFXChannel cPSG3, SndB6_Spikes_Move_PSG3,	$00, $00
+	smpsHeaderSFXChannel cPSG3, SndB6_Spikes_Move_PSG3,	$00, $03
 
 ; PSG3 Data
 SndB6_Spikes_Move_PSG3:

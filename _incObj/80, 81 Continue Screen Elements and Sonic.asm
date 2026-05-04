@@ -175,8 +175,8 @@ CSon_Animate:	; Routine 4
 		move.b	#id_Float4,obAnim(a0)			; use "getting up" animation (changes to id_Walk on finish)
 		clr.w	obInertia(a0)				; stop ground speed
 		subq.w	#8,obY(a0)				; shift Sonic up by a tile
-		move.b	#bgm_Fade,d0				; set fade-out music command
-		bsr.w	QueueSound2				; fade out music
+		move.b	#cmd_FadeOut,d0				; set fade-out music command
+		bsr.w	QueueSound1				; fade out music
 ; ---------------------------------------------------------------------------
 
 CSon_RunRight:	; Routine 6
