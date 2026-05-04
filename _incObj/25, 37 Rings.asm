@@ -189,7 +189,7 @@ CollectRing:
 	endif
 		ori.b	#1,(f_ringcount).w			; update the rings counter
 
-		move.w	#sfx_Ring,d0				; play ring sound
+
 
 		cmpi.w	#100,(v_rings).w			; do you have 100 or more rings?
 		blo.s	.playSound				; if not, branch
@@ -205,8 +205,11 @@ CollectRing:
 		addq.b	#1,(f_lifecount).w			; update the lives counter
 
 		move.w	#bgm_ExtraLife,d0			; play extra life music
+		jmp	(QueueSound1).l				; play selected music
+; ===========================================================================
 
 	.playSound:
+		move.w	#sfx_Ring,d0				; play ring sound
 		jmp	(QueueSound2).l				; play selected sound
 ; End of function CollectRing
 

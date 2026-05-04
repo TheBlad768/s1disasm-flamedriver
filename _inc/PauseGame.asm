@@ -6,16 +6,16 @@
 PauseGame:
 		nop						; useless nop (probably so an rts could easily be inserted here)
 		tst.b	(v_lives).w				; do you have any lives left?
-		beq.s	.unpauseGame				; if not, branch (prevents pausing during a game over)
+		beq.w	.unpauseGame				; if not, branch (prevents pausing during a game over)
 		tst.w	(f_pause).w				; is game already paused?
 		bne.s	.startPause				; if yes, branch
 		btst	#bitStart,(v_jpadpress1).w		; has Start button been pressed?
-		beq.s	.return					; if not, branch
+		beq.w	.return					; if not, branch
 
 	; Pause_StopGame:
 	.startPause:
 		move.w	#1,(f_pause).w				; pause the game
-		move.b	#1,(v_snddriver_ram.f_pausemusic).w	; pause music
+		SMPS_PauseMusic					; pause music
 ; ---------------------------------------------------------------------------
 
 ; Pause_Loop:
@@ -47,7 +47,7 @@ PauseGame:
 
 	; Pause_EndMusic:
 	.unpauseMusic:
-		move.b	#$80,(v_snddriver_ram.f_pausemusic).w	; unpause the music
+		SMPS_UnpauseMusic				; unpause the music
 
 	; Unpause:
 	.unpauseGame:
@@ -61,6 +61,6 @@ PauseGame:
 ; Pause_SlowMo:
 .slowMotion:
 		move.w	#1,(f_pause).w				; keep flag set so pause is triggered on next frame again
-		move.b	#$80,(v_snddriver_ram.f_pausemusic).w	; unpause the music
+		SMPS_UnpauseMusic				; unpause the music
 		rts						; return to main level loop
 ; End of function PauseGame
