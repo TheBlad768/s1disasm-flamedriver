@@ -16,7 +16,7 @@ if exist s1built.bin (
 	echo s1built.bin MD5 hash is: !HASH!
 
 	REM // Verify the hash against known builds.
-	if /I "!HASH!"=="EF1A8C3EDEF75E1384BCC7ED5257ABA3" (
+	if /I "!HASH!"=="2D6CB2D13D7B86C164C053BFF0FB6814" (
 		echo ROM is bit-perfect with latest stable Project1TwoEight build.
 	) else (
 		echo ROM is NOT bit-perfect with latest stable Project1TwoEight build!

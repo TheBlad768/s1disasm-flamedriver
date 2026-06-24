@@ -41,7 +41,7 @@ Sonic_Main:	; Routine 0
 		move.w	#ArtTile_Sonic,obGfx(a0)		; set VRAM location
 		move.b	#2,obPriority(a0)			; set sprite priority
 		move.b	#48/2,obActWid(a0)			; set render width
-		move.b	#4,obRender(a0)				; set to playfield-positioned mode
+		move.b	#sprite_cam_field,obRender(a0)		; set to playfield-positioned mode
 		move.w	#son_maxspeed,(v_sonspeedmax).w		; set Sonic's top speed
 		move.w	#son_acceleration,(v_sonspeedacc).w	; set Sonic's acceleration
 		move.w	#son_deceleration,(v_sonspeeddec).w	; set Sonic's deceleration
@@ -577,8 +577,21 @@ Sonic_WallSpeedAdjust:
 
 .hitright:	; d0 is $C0, Sonic is facing right
 		add.w	d1,obVelX(a0)				; adjust X-velocity to prevent Sonic from walking into the wall
+	if FixBugs
+		; Knuckles in Sonic 2 changed this code, likely to patch a bug
+		; where if the player slides into a wall while trying to move
+		; in the opposite direction, you'd enter the pushing animation
+		; while moving away.
+		move.w	#0,obInertia(a0)			; clear ground speed
+		btst	#0,obStatus(a0)				; is Sonic facing the wall?
+		bne.s	.awayright				; if not, branch
+		bset	#5,obStatus(a0)				; set pushing flag
+
+.awayright:
+	else
 		bset	#5,obStatus(a0)				; set pushing flag
 		move.w	#0,obInertia(a0)			; clear ground speed
+	endif
 		rts						; return
 ; ===========================================================================
 
@@ -591,8 +604,18 @@ Sonic_WallSpeedAdjust:
 ; loc_13066:
 .hitleft:	; d0 is $40, Sonic is facing left
 		sub.w	d1,obVelX(a0)				; adjust X-velocity to prevent Sonic from walking into the wall
+	if FixBugs
+		; See above.
+		move.w	#0,obInertia(a0)			; clear ground speed
+		btst	#0,obStatus(a0)				; is Sonic facing the wall?
+		beq.s	.awayleft				; if not, branch
+		bset	#5,obStatus(a0)				; set pushing flag
+
+.awayleft:
+	else
 		bset	#5,obStatus(a0)				; set pushing flag
 		move.w	#0,obInertia(a0)			; clear ground speed
+	endif
 		rts						; return
 ; ===========================================================================
 
@@ -2121,7 +2144,7 @@ Sonic_Animate:
 
 		move.b	obStatus(a0),d1				; get Sonic's status bitfield
 		andi.b	#1,d1					; mask out everything but the X-flip flag
-		andi.b	#$FC,obRender(a0)			; clear X-flip and Y-flip flags in Sonic's render flags
+		andi.b	#~(sprite_xflip|sprite_yflip),obRender(a0) ; clear X-flip and Y-flip flags in Sonic's render flags
 		or.b	d1,obRender(a0)				; set new X-flip flag state
 
 		subq.b	#1,obTimeFrame(a0)			; subtract 1 from frame duration
@@ -2191,17 +2214,17 @@ Sonic_Animate:
 .notoffbyone:
 	endif
 		move.b	obStatus(a0),d2				; get Sonic's current status bitfield
-		andi.b	#1,d2					; mask out anything but the X-flip flag
+		andi.b	#sprite_xflip,d2			; mask out anything but the X-flip flag
 		bne.s	.flip					; is Sonic mirrored horizontally? if yes, branch
 		not.b	d0					; reverse angle
 ; loc_13A70:
 .flip:
 		addi.b	#$10,d0					; add $10 to angle
 		bpl.s	.noinvert				; if angle is $0-$7F, branch
-		moveq	#3,d1					; invert both flip flags
+		moveq	#sprite_xflip|sprite_yflip,d1		; invert both flip flags
 ; loc_13A78:
 .noinvert:
-		andi.b	#$FC,obRender(a0)			; clear current flip flags
+		andi.b	#~(sprite_xflip|sprite_yflip),obRender(a0) ; clear current flip flags
 		eor.b	d1,d2					; invert flip flags depending on current angle
 		or.b	d2,obRender(a0)				; set new flip flags
 
@@ -2271,8 +2294,8 @@ Sonic_Animate:
 		move.b	d2,obTimeFrame(a0)			; modify frame duration
 
 		move.b	obStatus(a0),d1				; get Sonic's current status flags
-		andi.b	#1,d1					; mask out everything but the X-flip flag
-		andi.b	#$FC,obRender(a0)			; clear Sonic's current flip flags
+		andi.b	#sprite_xflip,d1			; mask out everything but the X-flip flag
+		andi.b	#~(sprite_xflip|sprite_yflip),obRender(a0) ; clear Sonic's current flip flags
 		or.b	d1,obRender(a0)				; set new X-flip flag
 		bra.w	.loadframe				; update current frame
 ; ===========================================================================
@@ -2297,8 +2320,8 @@ Sonic_Animate:
 		lea	(SonAni_Push).l,a1			; load Sonic's animation script for pushing
 
 		move.b	obStatus(a0),d1				; get Sonic's current status flags
-		andi.b	#1,d1					; mask out everything but the X-flip flag
-		andi.b	#$FC,obRender(a0)			; clear Sonic's current flip flags
+		andi.b	#sprite_xflip,d1			; mask out everything but the X-flip flag
+		andi.b	#~(sprite_xflip|sprite_yflip),obRender(a0) ; clear Sonic's current flip flags
 		or.b	d1,obRender(a0)				; set new X-flip flag
 		bra.w	.loadframe				; update current frame
 ; End of function Sonic_Animate
