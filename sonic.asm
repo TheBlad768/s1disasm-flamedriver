@@ -5033,6 +5033,7 @@ Level_End:	binclude	"levels/ending.kos"
 ; Uncompressed graphics - Giant Rings
 ; ---------------------------------------------------------------------------
 Art_BigRing:	binclude	"artunc/Giant Ring.unc"
+Art_BigRing_size: equ *-Art_BigRing
 		even
 
 ; ---------------------------------------------------------------------------
