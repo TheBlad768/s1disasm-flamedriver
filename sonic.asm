@@ -3622,7 +3622,6 @@ End_LoadData:
 		lea	(v_128x128+$20*chunk_size_128).l,a1 ; RAM address to buffer the patterns (overwriting unused chunk RAM)
 		bsr.w	KosDec				; decompress Kosinski-compressed chunks mappings to buffer
 		moveq	#palid_Sonic,d0			; load Sonic's palette...
-
 		bsr.w	PalLoad_Fade			; ...to fade-in buffer
 		move.w	#bgm_Ending,d0			; play ending sequence music
 		bsr.w	QueueSound1			; play it
