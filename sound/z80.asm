@@ -199,7 +199,7 @@ zPlaySEGAPCMLoop:
 
 	inc	de			; 6	; Point to next byte of DAC sample
 	dec	hl			; 6	; Decrement remaining bytes on DAC sample
-	ld	a,l			; 4	; a = low byte of remainig bytes
+	ld	a,l			; 4	; a = low byte of remaining bytes
 	or	h			; 4	; Are there any bytes left?
 	jp	nz,zPlaySEGAPCMLoop	; 10	; If yes, keep playing sample
 					; 90 in total
