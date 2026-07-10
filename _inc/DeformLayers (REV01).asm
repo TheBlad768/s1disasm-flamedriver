@@ -59,14 +59,14 @@ Deform_GHZ:
 		asl.l	#1,d4
 		add.l	d1,d4					; multiply by $60
 		moveq	#0,d6
-		bsr.w	UpdateBG_X_Block3			; update bg x pos and set redraw flags
+		bsr.w	BGScroll_Block3			; update bg x pos and set redraw flags
 
 		; block 2 - hills & waterfalls
 		move.w	(v_scrshiftx).w,d4			; get camera x pos change since last frame
 		ext.l	d4
 		asl.l	#7,d4					; multiply by $80
 		moveq	#0,d6
-		bsr.w	UpdateBG_X_Block2			; update bg x pos and set redraw flags
+		bsr.w	BGScroll_Block2			; update bg x pos and set redraw flags
 
 		; calculate Y position
 		lea	(v_hscrolltablebuffer).w,a1
@@ -177,7 +177,7 @@ Deform_LZ:
 		move.w	(v_scrshifty).w,d5
 		ext.l	d5
 		asl.l	#7,d5
-		bsr.w	UpdateBG_XY
+		bsr.w	BGScroll_XY
 
 		move.w	(v_bgscreenposy).w,(v_bgscrposy_vdp).w
 
@@ -260,21 +260,21 @@ Deform_MZ:
 		add.l	d1,d4					; multiply by $C0
 
 		moveq	#2,d6
-		bsr.w	UpdateBG_X_Block1
+		bsr.w	BGScroll_Block1
 
 		; block 3 - mountains
 		move.w	(v_scrshiftx).w,d4			; get camera x pos change since last frame
 		ext.l	d4
 		asl.l	#6,d4					; multiply by $40
 		moveq	#6,d6
-		bsr.w	UpdateBG_X_Block3
+		bsr.w	BGScroll_Block3
 
 		; block 2 - bushes & antique buildings
 		move.w	(v_scrshiftx).w,d4			; get camera x pos change since last frame
 		ext.l	d4
 		asl.l	#7,d4					; multiply by $80
 		moveq	#4,d6
-		bsr.w	UpdateBG_X_Block2
+		bsr.w	BGScroll_Block2
 
 		; calculate y position of background
 		move.w	#512,d0					; start with 512px, ignoring 2 chunks
@@ -289,7 +289,7 @@ Deform_MZ:
 	.noYscroll:
 		move.w	d0,(v_bg2screenposy).w
 		move.w	d0,(v_bg3screenposy).w
-		bsr.w	UpdateBG_Y_Absolute
+		bsr.w	BGScroll_YAbsolute
 		move.w	(v_bgscreenposy).w,(v_bgscrposy_vdp).w
 
 		; do something with redraw flags
@@ -355,7 +355,7 @@ Deform_MZ:
 		andi.w	#$1F0,d0
 		lsr.w	#3,d0
 		lea	(a2,d0.w),a2
-		bra.w	UpdateHscrollBuffer
+		bra.w	BGScroll_X
 ; End of function Deform_MZ
 
 ; ===========================================================================
@@ -368,7 +368,7 @@ Deform_SLZ:
 		move.w	(v_scrshifty).w,d5
 		ext.l	d5
 		asl.l	#7,d5
-		bsr.w	UpdateBG_Y2
+		bsr.w	BGScroll_Y
 		move.w	(v_bgscreenposy).w,(v_bgscrposy_vdp).w
 
 		; calculate background scroll buffer
@@ -425,7 +425,7 @@ Deform_SLZ:
 		andi.w	#$3F0,d0
 		lsr.w	#3,d0					; d0 = (v_bgscreenposy-$C0)/8
 		lea	(a2,d0.w),a2				; jump to relevant part of bg scroll buffer
-		; Fall-through to UpdateHscrollBuffer...
+		; Fall-through to BGScroll_X...
 ; End of function Deform_SLZ
 
 ; ---------------------------------------------------------------------------
@@ -437,8 +437,8 @@ Deform_SLZ:
 ;	a2 = address of bg scroll buffer
 ; ---------------------------------------------------------------------------
 
-; Bg_Scroll_X:
-UpdateHscrollBuffer:
+; Bg_Scroll_X: UpdateHscrollBuffer:
+BGScroll_X:
 		lea	(v_hscrolltablebuffer).w,a1
 		move.w	#15-1,d1
 		move.w	(v_screenposx).w,d0			; get camera x pos
@@ -457,7 +457,7 @@ UpdateHscrollBuffer:
 	endr
 		dbf	d1,.loop_hscroll
 		rts
-; End of function UpdateHscrollBuffer
+; End of function BGScroll_X
 
 ; ===========================================================================
 ; ---------------------------------------------------------------------------
@@ -472,7 +472,7 @@ Deform_SYZ:
 		move.l	d5,d1
 		asl.l	#1,d5
 		add.l	d1,d5					; multiply by $30
-		bsr.w	UpdateBG_Y2
+		bsr.w	BGScroll_Y
 		move.w	(v_bgscreenposy).w,(v_bgscrposy_vdp).w
 
 		; calculate background scroll buffer
@@ -540,7 +540,7 @@ Deform_SYZ:
 		andi.w	#$1F0,d0
 		lsr.w	#3,d0
 		lea	(a2,d0.w),a2
-		bra.w	UpdateHscrollBuffer
+		bra.w	BGScroll_X
 ; End of function Deform_SYZ
 
 ; ===========================================================================
@@ -559,14 +559,14 @@ Deform_SBZ:
 		ext.l	d4
 		asl.l	#7,d4					; multiply by $80
 		moveq	#2,d6
-		bsr.w	UpdateBG_X_Block1
+		bsr.w	BGScroll_Block1
 
 		; block 3 - distant brown buildings
 		move.w	(v_scrshiftx).w,d4			; get camera x pos change since last frame
 		ext.l	d4
 		asl.l	#6,d4					; multiply by $40
 		moveq	#6,d6
-		bsr.w	UpdateBG_X_Block3
+		bsr.w	BGScroll_Block3
 
 		; block 2 - upper black buildings
 		move.w	(v_scrshiftx).w,d4			; get camera x pos change since last frame
@@ -576,14 +576,14 @@ Deform_SBZ:
 		asl.l	#1,d4
 		add.l	d1,d4					; multiply by $60
 		moveq	#4,d6
-		bsr.w	UpdateBG_X_Block2
+		bsr.w	BGScroll_Block2
 
 		; vertical scrolling
 		moveq	#0,d4
 		move.w	(v_scrshifty).w,d5
 		ext.l	d5
 		asl.l	#5,d5
-		bsr.w	UpdateBG_Y
+		bsr.w	BGScroll_YRelative
 
 		move.w	(v_bgscreenposy).w,d0
 		move.w	d0,(v_bg2screenposy).w
@@ -646,7 +646,7 @@ Deform_SBZ:
 		andi.w	#$1F0,d0
 		lsr.w	#3,d0
 		lea	(a2,d0.w),a2
-		bra.w	UpdateHscrollBuffer
+		bra.w	BGScroll_X
 ;-------------------------------------------------------------------------------
 
 ; loc_68A2:
@@ -658,7 +658,7 @@ Deform_SBZ2:
 		move.w	(v_scrshifty).w,d5
 		ext.l	d5
 		asl.l	#5,d5
-		bsr.w	UpdateBG_XY
+		bsr.w	BGScroll_XY
 		move.w	(v_bgscreenposy).w,(v_bgscrposy_vdp).w
 
 		; copy fg & bg x-position to h-scroll table
@@ -692,8 +692,8 @@ Deform_SBZ2:
 ;	d5 = background y-diff
 ; ---------------------------------------------------------------------------
 
-; ScrollBlock1: BGScroll_XY:
-UpdateBG_XY:
+; ScrollBlock1:
+BGScroll_XY:
 		move.l	(v_bgscreenposx).w,d2
 		move.l	d2,d0					; save old bg position
 		add.l	d4,d0					; apply difference
@@ -703,20 +703,20 @@ UpdateBG_XY:
 		andi.w	#$10,d1
 		move.b	(v_bg1_xblock).w,d3
 		eor.b	d3,d1
-		bne.s	UpdateBG_Y				; insufficient change to redraw bg
+		bne.s	BGScroll_YRelative				; insufficient change to redraw bg
 		eori.b	#$10,(v_bg1_xblock).w
 		sub.l	d2,d0					; new bg pos minus old
 		bpl.s	.redraw_right				; branch if positive (i.e. moving right)
 		bset	#2,(v_bg1_scroll_flags).w
-		bra.s	UpdateBG_Y
+		bra.s	BGScroll_YRelative
 
 	.redraw_right:
 		bset	#3,(v_bg1_scroll_flags).w
-		; Fall-through to UpdateBG_Y...
+		; Fall-through to BGScroll_YRelative...
 ; ---------------------------------------------------------------------------
 
-; loc_679C: BGScroll_YRelative:
-UpdateBG_Y:
+; loc_679C:
+BGScroll_YRelative:
 		move.l	(v_bgscreenposy).w,d3
 		move.l	d3,d0
 		add.l	d5,d0
@@ -738,11 +738,11 @@ UpdateBG_Y:
 
 	.return:
 		rts
-; End of function UpdateBG_XY
+; End of function BGScroll_XY
 ; ===========================================================================
 
 ; ScrollBlock2: Bg_Scroll_Y:
-UpdateBG_Y2:
+BGScroll_Y:
 		move.l	(v_bgscreenposy).w,d3
 		move.l	d3,d0
 		add.l	d5,d0
@@ -764,7 +764,7 @@ UpdateBG_Y2:
 
 	.return:
 		rts
-; End of function UpdateBG_Y2
+; End of function BGScroll_Y
 
 ; ===========================================================================
 ; ---------------------------------------------------------------------------
@@ -774,8 +774,8 @@ UpdateBG_Y2:
 ;	d0 = new background y position
 ; ---------------------------------------------------------------------------
 
-; ScrollBlock3: BGScroll_YAbsolute:
-UpdateBG_Y_Absolute:
+; ScrollBlock3:
+BGScroll_YAbsolute:
 		move.w	(v_bgscreenposy).w,d3			; save old bg position
 		move.w	d0,(v_bgscreenposy).w			; update bg position
 		move.w	d0,d1
@@ -794,7 +794,7 @@ UpdateBG_Y_Absolute:
 
 	.return:
 		rts
-; End of function UpdateBG_Y_Absolute
+; End of function BGScroll_YAbsolute
 
 ; ===========================================================================
 ; ---------------------------------------------------------------------------
@@ -805,8 +805,7 @@ UpdateBG_Y_Absolute:
 ;	d6 = bit to set for redraw direction
 ; ---------------------------------------------------------------------------
 
-; BGScroll_Block1:
-UpdateBG_X_Block1:
+BGScroll_Block1:
 		move.l	(v_bgscreenposx).w,d2
 		move.l	d2,d0
 		add.l	d4,d0
@@ -829,11 +828,10 @@ UpdateBG_X_Block1:
 
 	.return:
 		rts
-; End of function UpdateBG_X_Block1
+; End of function BGScroll_Block1
 ; ===========================================================================
 
-; BGScroll_Block2:
-UpdateBG_X_Block2:
+BGScroll_Block2:
 		move.l	(v_bg2screenposx).w,d2
 		move.l	d2,d0
 		add.l	d4,d0
@@ -856,11 +854,10 @@ UpdateBG_X_Block2:
 
 	.return:
 		rts
-; End of function UpdateBG_X_Block2
+; End of function BGScroll_Block2
 ; ===========================================================================
 
-; BGScroll_Block3:
-UpdateBG_X_Block3:
+BGScroll_Block3:
 		move.l	(v_bg3screenposx).w,d2
 		move.l	d2,d0
 		add.l	d4,d0
@@ -883,4 +880,4 @@ UpdateBG_X_Block3:
 
 	.return:
 		rts
-; End of function UpdateBG_X_Block3
+; End of function BGScroll_Block3
