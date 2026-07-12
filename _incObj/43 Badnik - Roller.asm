@@ -33,8 +33,15 @@ Roll_Main:	; Routine 0
 		move.b	#sprite_cam_field,obRender(a0)		; set to playfield-positioned mode
 		move.b	#4,obPriority(a0)			; set sprite priority
 		move.b	#32/2,obActWid(a0)			; set sprite display width
-
 	.hide:
+
+	if FixBugs
+		; Fix badnik invisibly falling forever if it doesn't have a floor beneath it
+		move.w	(v_limitbtm2).w,d0			; get current bottom level boundary
+		addi.w	#224,d0					; add screen height
+		cmp.w	obY(a0),d0				; has object fallen below bottom level boundary?
+		blo.w	DeleteObject				; if yes, delete it
+	endif
 		rts						; return (and do NOT display sprite yet)
 ; ===========================================================================
 
