@@ -32,10 +32,8 @@ cat_segmentpos:	equ cat_parent	; segment position - starts as 0/4/8/$A, incremen
 Cat_HideForInit:
 	if FixBugs
 		; Fix badnik invisibly falling forever if it doesn't have a floor beneath it
-		move.w	(v_limitbtm2).w,d0			; get current bottom level boundary
-		addi.w	#224,d0					; add screen height
-		cmp.w	obY(a0),d0				; has object fallen below bottom level boundary?
-		blo.w	Cat_Delete				; if yes, delete it
+		cmpi.w	#$7FF,obY(a0)				; has object fallen below max level height?
+		bhi.w	Cat_Delete				; if yes, delete it
 	endif
 		rts						; return
 ; ===========================================================================

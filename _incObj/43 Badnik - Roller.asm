@@ -37,10 +37,8 @@ Roll_Main:	; Routine 0
 
 	if FixBugs
 		; Fix badnik invisibly falling forever if it doesn't have a floor beneath it
-		move.w	(v_limitbtm2).w,d0			; get current bottom level boundary
-		addi.w	#224,d0					; add screen height
-		cmp.w	obY(a0),d0				; has object fallen below bottom level boundary?
-		blo.w	DeleteObject				; if yes, delete it
+		cmpi.w	#$7FF,obY(a0)				; has object fallen below max level height?
+		bhi.w	DeleteObject				; if yes, delete it
 	endif
 		rts						; return (and do NOT display sprite yet)
 ; ===========================================================================
