@@ -150,7 +150,7 @@ Plat_TypeIndex:	dc.w Plat_Stationary-Plat_TypeIndex		; 0
 		dc.w Plat_UpDown_Slow-Plat_TypeIndex		; C
 ; ===========================================================================
 
-; Type 0 - stationary
+; Type 0/9 - stationary
 Plat_Stationary:
 		rts						; platform 00 doesn't move
 ; ===========================================================================
@@ -314,6 +314,7 @@ Plat_Rising:
 		rts						; return
 ; ===========================================================================
 
+; Type A - moving down and up continuously (large platforms in GHZ act 2)
 Plat_DownUp_LargeGHZ2:
 		move.w	plat_origY(a0),d0			; get initial platform Y-position
 		move.b	obAngle(a0),d1				; load platform-motion variable
@@ -323,7 +324,6 @@ Plat_DownUp_LargeGHZ2:
 		add.w	d1,d0					; add motion variable to initial Y-position
 		move.w	d0,plat_rawY(a0)			; update platform's Y-position
 ; ---------------------------------------------------------------------------
-
 
 Plat_ChangeMotion:
 		move.b	(v_oscillate+$1A).w,obAngle(a0)		; update platform-movement variable (frequency 8, middle value $40)
