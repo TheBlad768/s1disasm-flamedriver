@@ -1,3 +1,8 @@
+; ===========================================================================
+; ---------------------------------------------------------------------------
+; RAM Variables
+; ---------------------------------------------------------------------------
+
 	include "s1.sounddriver.ram.asm"
 
 ; Sign-extends a 32-bit integer to 64-bit
@@ -423,7 +428,7 @@ v_timingvariables_end:
 v_chunk0collision:	ds.w	1				; very subtly (and perhaps unintentionally) used by FindNearestTile when encountering chunk 0
 		if v_chunk0collision<>ramaddr($FFFFFF00)
 			error "v_chunk0collision needs to be at address $FFFFFF00 so that FindNearestTile works correctly (currently offset by \{signedToString(v_chunk0collision-ramaddr($FFFFFF00))} bytes) ."
-		endif	
+		endif
 	endif
 			ds.b	$E				; unused
 v_screenposx_dup:	ds.l	1				; screen position x (duplicate)

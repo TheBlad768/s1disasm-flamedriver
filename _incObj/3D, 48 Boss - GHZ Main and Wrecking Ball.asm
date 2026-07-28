@@ -1,3 +1,4 @@
+; ===========================================================================
 ; ---------------------------------------------------------------------------
 ; Object 3D - Eggman (GHZ) - part 1
 ; ---------------------------------------------------------------------------
@@ -13,13 +14,13 @@ BGHZ_Index:	dc.w BGHZ_Main-BGHZ_Index
 		dc.w BGHZ_FaceMain-BGHZ_Index
 		dc.w BGHZ_FlameMain-BGHZ_Index
 
-BGHZ_ParentObj:		equ objoff_34				; Pointer to main boss controller
+BGHZ_ParentObj:		equ objoff_34				; pointer to main boss controller
 BGHZ_BossGenericTimer:	equ objoff_3C 				; timer for how many frames to do an action, whether its wait for explosions, or to move in a direction
 BGHZ_SineCounter:	equ objoff_3F 				; sine counter for bobbing motion
 ; ===========================================================================
 
-BGHZ_ObjData:	
-		dc.b 2,	0					; routine counter, animation
+BGHZ_ObjData:	; routine counter, animation
+		dc.b 2,	0
 		dc.b 4,	1
 		dc.b 6,	7
 ; ===========================================================================
@@ -27,7 +28,7 @@ BGHZ_ObjData:
 BGHZ_Main:	; Routine 0
 		lea	(BGHZ_ObjData).l,a2 			; load address of object data into a2 for indexing
 		movea.l	a0,a1 					; copy boss object address into a1 so that LoadBoss on pass 1 uses the main boss object.
-		moveq	#2,d1 					; set the loading loop amount, we have 3 routines so 3 times to loop
+		moveq	#3-1,d1 				; set the loading loop amount, we have 3 routines so 3 times to loop
 		bra.s	BGHZ_LoadBoss
 ; ===========================================================================
 
@@ -47,10 +48,10 @@ BGHZ_LoadBoss:
 		move.b	#3,obPriority(a1) 			; set sprite priority to 3 (0 is front of screen)
 		move.b	(a2)+,obAnim(a1) 			; load appropriate animation index, then increment a2 (now we are one full entry lower in our ObjData table)
 
-; BGHZ_ParentObj is used here as a reference back to the main boss controller. 
+; BGHZ_ParentObj is used here as a reference back to the main boss controller.
 ; This is because when we are in ExecuteObjects, a0 is set to each object and sub objects own slot, so we need a way to find the original boss object.
 ; On the first loop, this copies the address to itself, but the other loops are what it was intended for.
-		move.l	a0,BGHZ_ParentObj(a1) 
+		move.l	a0,BGHZ_ParentObj(a1)
 
 		dbf	d1,BGHZ_Loop				; repeat sequence 2 more times
 
@@ -145,6 +146,7 @@ BGHZ_Defeated:
 
 ; ===========================================================================
 
+		; These subroutines are shared by all bosses
 		include	"_incObj/sub BossDefeated & BossMove.asm"
 
 ; ===========================================================================
@@ -184,7 +186,7 @@ BGHZ_ShipMove:
 		move.w	#$40-1,BGHZ_BossGenericTimer(a0)        ; set a new timer
 		move.w	#$100,obVelX(a0) 			; move the ship sideways
 		cmpi.w	#boss_ghz_x+$A0,obBossX(a0) 		; have we reached the x pos limit?
-		bne.s	BGHZ_Reverse 				; if yes, reverse 
+		bne.s	BGHZ_Reverse 				; if yes, reverse
 		move.w	#($40*2)-1,BGHZ_BossGenericTimer(a0) 	; increase timer to stay put before moving again
 		move.w	#$40,obVelX(a0) 			; change velocity
 
@@ -231,7 +233,7 @@ BGHZ_Explode:
 		bclr	#7,obStatus(a0) 			; clear destroyed/defeated flag (flag is set in sub ReactToItem.asm)
 		clr.w	obVelX(a0) 				; stop moving vertically (horizontal velocity is not cleared)
 		addq.b	#2,ob2ndRout(a0) 			; advance routine to recover
-		move.w	#-38,BGHZ_BossGenericTimer(a0) 	; set negative timer to count up from
+		move.w	#-38,BGHZ_BossGenericTimer(a0)		; set negative timer to count up from
 		tst.b	(v_bossstatus).w 			; has the boss been marked as defeated?
 		bne.s	.exit 					; if yes, leave early
 		move.b	#1,(v_bossstatus).w 			; set the boss as defeated
@@ -302,7 +304,7 @@ BGHZ_Escape:
 
 ; loc_17A16:
 .flee:
-		bsr.w	BossMove 				
+		bsr.w	BossMove
 		bra.w	BGHZ_ShipUpdate
 ; ===========================================================================
 
@@ -353,10 +355,10 @@ BGHZ_FaceMain:	; Routine 4
 .writeAnim:
 		move.b	d1,obAnim(a0) 				; move animation state into obAnim
 
-; The below line checks: are we in the escape state? 
+; The below line checks: are we in the escape state?
 ; 12-4-6-2=0, so if we are in the escape state this is true, any other state would not result in a 0. If all this confuses you, review the _Index code throughout this file.
-	
-		subq.b	#2,d0 
+
+		subq.b	#2,d0
 		bne.s	.skip 					; we are not escaping, display normally
 		move.b	#6,obAnim(a0) 				; set animation state to facepanic
 		tst.b	obRender(a0) 				; has Eggman's face left the screen?
@@ -441,7 +443,7 @@ GBall_Main:	; Routine 0
 		move.w	#ArtTile_Eggman_Weapons,obGfx(a0)
 		lea	obSubtype(a0),a2			; copy object subtype
 		move.b	#0,(a2)+				; clear object subtype and increment address
-		moveq	#5,d1					; prep for loop below, loop 6 times
+		moveq	#6-1,d1					; prep for loop below, loop 6 times
 		movea.l	a0,a1					; copy Ball controller address
 		bra.s	GBall_LinkSetup
 ; ===========================================================================
@@ -468,7 +470,7 @@ GBall_LinkSetup:
 		move.b	#sprite_cam_field,obRender(a1)		; set render flags to normal level/playfield coordinates (not screen relative)
 		move.b	#16/2,obActWid(a1)			; set radius of object in pixels (used for hiding sprites off screen)
 		move.b	#6,obPriority(a1)			; set object render priority to 6 (lower priority)
-		move.l	BGHZ_ParentObj(a0),BGHZ_ParentObj(a1)	; copy parent boss object pointer to link's parent object pointer	
+		move.l	BGHZ_ParentObj(a0),BGHZ_ParentObj(a1)	; copy parent boss object pointer to link's parent object pointer
 		dbf	d1,GBall_MakeLinks 			; repeat sequence 5 more times
 
 GBall_MakeBall:

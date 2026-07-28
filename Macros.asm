@@ -1,3 +1,8 @@
+; ===========================================================================
+; ---------------------------------------------------------------------------
+; Macros (game-specific)
+; ---------------------------------------------------------------------------
+
 ; ---------------------------------------------------------------------------
 ; Set a VRAM address via the VDP control port.
 ; input: 16-bit VRAM address, control port (default is (vdp_control_port).l)
@@ -138,7 +143,7 @@ startZ80:	macro
 ; ---------------------------------------------------------------------------
 
 disable_ints:	macro
-		move.w	#$2700,sr
+		move.w	#$2700,sr				; disable interrupts
 		endm
 
 ; ---------------------------------------------------------------------------
@@ -146,7 +151,7 @@ disable_ints:	macro
 ; ---------------------------------------------------------------------------
 
 enable_ints:	macro
-		move.w	#$2300,sr
+		move.w	#$2300,sr				; enable interrupts
 		endm
 
 ; ---------------------------------------------------------------------------
@@ -154,9 +159,9 @@ enable_ints:	macro
 ; ---------------------------------------------------------------------------
 
 disable_display:	macro
-		move.w	(v_vdp_buffer1).w,d0		; get buffered copy of VDP register $81
-		andi.b	#%10111111,d0			; clear bit 6 (disable display; fill with background color)
-		move.w	d0,(vdp_control_port).l		; write to VDP
+		move.w	(v_vdp_buffer1).w,d0			; get buffered copy of VDP register $81
+		andi.b	#%10111111,d0				; clear bit 6 (disable display; fill with background color)
+		move.w	d0,(vdp_control_port).l			; write to VDP
 		endm
 
 ; ---------------------------------------------------------------------------
@@ -164,9 +169,9 @@ disable_display:	macro
 ; ---------------------------------------------------------------------------
 
 enable_display:	macro
-		move.w	(v_vdp_buffer1).w,d0		; get buffered copy of VDP register $81
-		ori.b	#%01000000,d0			; set bit 6 (enable display)
-		move.w	d0,(vdp_control_port).l		; write to VDP
+		move.w	(v_vdp_buffer1).w,d0			; get buffered copy of VDP register $81
+		ori.b	#%01000000,d0				; set bit 6 (enable display)
+		move.w	d0,(vdp_control_port).l			; write to VDP
 		endm
 
 ; ---------------------------------------------------------------------------
@@ -272,15 +277,15 @@ jle:		macro loc
 
 out_of_range:	macro exit,pos,bmicheck
 	if ("pos"<>"")
-		move.w	pos,d0		; get object position (if specified as not obX)
+		move.w	pos,d0					; get object position (if specified as not obX)
 	else
-		move.w	obX(a0),d0	; get object position
+		move.w	obX(a0),d0				; get object position
 	endif
-		andi.w	#$FF80,d0	; round down to nearest $80
-		move.w	(v_screenposx).w,d1 ; get screen position
+		andi.w	#$FF80,d0				; round down to nearest $80
+		move.w	(v_screenposx).w,d1			; get screen position
 		subi.w	#128,d1
 		andi.w	#$FF80,d1
-		sub.w	d1,d0		; approx distance between object and screen
+		sub.w	d1,d0					; approx distance between object and screen
 	if ("bmicheck"<>"")
 		; This bmi is in a few out_of_range calls (albeit redundant)
 		bmi.w	exit

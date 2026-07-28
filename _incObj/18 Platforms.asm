@@ -246,7 +246,7 @@ Plat_FallingDown:
 		bne.s	.fallingDown				; if time remains, branch
 		btst	#3,obStatus(a0)				; was Sonic still on platform as timer expired?
 		beq.s	.notOnPlatform				; if not, branch
-		
+
 		; Note: a1 was set to v_player when calling ExitPlatform earlier
 		bset	#1,obStatus(a1)				; set Sonic in-air
 		bclr	#3,obStatus(a1)				; clear Sonic's on-platform flag

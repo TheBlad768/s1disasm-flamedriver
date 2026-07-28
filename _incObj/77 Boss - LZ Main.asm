@@ -1,10 +1,11 @@
+; ===========================================================================
 ; ---------------------------------------------------------------------------
 ; Object 77 - Eggman (LZ)
 ; ---------------------------------------------------------------------------
 
 BossLabyrinth:
-		moveq	#0,d0					
-		move.b	obRoutine(a0),d0			; copy object routine		
+		moveq	#0,d0
+		move.b	obRoutine(a0),d0			; copy object routine
 		move.w	BossLabyrinth_Index(pc,d0.w),d1		; use the object routine and BossLabyrinth_Index to calculate our offset
 		jmp	BossLabyrinth_Index(pc,d1.w)		; jump into the table and use our offset to pick a routine in the index to go to
 ; ===========================================================================
@@ -14,14 +15,15 @@ BossLabyrinth_Index:
 		dc.w BossLabyrinth_FaceMain-BossLabyrinth_Index
 		dc.w BossLabyrinth_FlameMain-BossLabyrinth_Index
 
-
-BossLabyrinth_ParentObj equ objoff_34				; pointer to main boss controller
-BossLabyrinth_EarlyDefeatFlag equ objoff_3D			; simple flag used to see if boss has been defeated early
-BossLabyrinth_SineCounter equ objoff_3F				; sine counter for bobbing motion
-BossLabyrinth_GenericTimer equ objoff_3C			; generic timer, only used for a brief animation at the end of the fight
+BossLabyrinth_ParentObj:	equ objoff_34			; pointer to main boss controller
+BossLabyrinth_GenericTimer:	equ objoff_3C			; generic timer, only used for a brief animation at the end of the fight
+BossLabyrinth_EarlyDefeatFlag:	equ objoff_3D			; simple flag used to see if boss has been defeated early
+BossLabyrinth_SineCounter:	equ objoff_3F			; sine counter for bobbing motion
+; ===========================================================================
 
 BossLabyrinth_ObjData:
-		dc.b 2,	0					; routine number, animation (ship body)
+		; routine number, animation
+		dc.b 2,	0					; ship body
 		dc.b 4,	1					; face
 		dc.b 6,	7					; thruster
 ; ===========================================================================
@@ -68,7 +70,7 @@ BossLabyrinth_ShipMain:	; Routine 2
 		jsr	BossLabyrinth_ShipIndex(pc,d1.w)	; jump into the table and use our offset to pick a routine in the index to go to
 		lea	(Ani_Eggman).l,a1			; load animations
 		jsr	(AnimateSprite).l
-		moveq	#sprite_xflip|sprite_yflip,d0		; move first 2 bits into d0			
+		moveq	#sprite_xflip|sprite_yflip,d0		; move first 2 bits into d0
 		and.b	obStatus(a0),d0				; AND with obStatus so now d0 contains X and Y logical flip bits only
 		andi.b	#~(sprite_xflip|sprite_yflip),obRender(a0) ; clear the x and y flip
 		or.b	d0,obRender(a0)				; OR the two together, so now DisplaySprite has X and Y orientation and above render bits
@@ -198,7 +200,7 @@ BLZ_ShipMove2:
 		bne.s	.moveBoss				; have we met BOTH conditions? if not, branch and keep moving
 		move.w	#-$180,obVelY(a0)			; set Y velocity only for next phase
 		addq.b	#2,ob2ndRout(a0)			; increment secondary routine index
-		clr.b	BossLabyrinth_SineCounter(a0)		; clear vertical bob 
+		clr.b	BossLabyrinth_SineCounter(a0)		; clear vertical bob
 
 ; loc_1801A:
 .moveBoss:
@@ -220,7 +222,7 @@ BLZ_ShipMove3:
 ; loc_18046:
 .moveBoss:
 		addq.b	#2,ob2ndRout(a0)			; increment secondary routine index
-		bra.w	BLZ_MoveBoss				
+		bra.w	BLZ_MoveBoss
 ; ===========================================================================
 
 ; loc_1804E:
@@ -353,7 +355,7 @@ BLZ_Escape2:
 
 ;loc_18160:
 .checkOffscreen:
-		tst.b	obRender(a0)				; has Eggman left the screen (is bit 7 clear)?		
+		tst.b	obRender(a0)				; has Eggman left the screen (is bit 7 clear)?
 		bpl.s	BossLabyrinth_ShipDel			; yes, bit 7 is cleared, so we can delete the object (this leverages signed numbers!)
 
 ; loc_18166:
@@ -385,7 +387,7 @@ BossLabyrinth_FaceMain:	; Routine 4
 		tst.b   BossLabyrinth_EarlyDefeatFlag(a1)	; has Eggman been defeated while ascending?
 	else
 		tst.b	BossLabyrinth_EarlyDefeatFlag(a0)	; check the defeat flag, except a0 contains the face object and not the boss so this value will always be 0
-	endif	
+	endif
 		beq.s	.checkHitState				; if not, branch
 		moveq	#$A,d1					; set animation to defeated
 		bra.s	.writeAnim				; write animation
@@ -396,7 +398,7 @@ BossLabyrinth_FaceMain:	; Routine 4
 		tst.b	obColType(a1)				; is the boss currently being hit?
 		bne.s	.checkSonicState			; if not, check Sonic's state
 		moveq	#5,d1					; set animation to facehit
-		bra.s	.writeAnim				
+		bra.s	.writeAnim
 ; ===========================================================================
 
 ; loc_18196:
@@ -407,7 +409,7 @@ BossLabyrinth_FaceMain:	; Routine 4
 
 ; loc_181A0:
 .writeAnim:
-		move.b	d1,obAnim(a0)				; move animation state so that animation can execute		
+		move.b	d1,obAnim(a0)				; move animation state so that animation can execute
 		cmpi.b	#$E,d0					; are we currently in Escape2?
 		bne.s	.skip					; if not, branch
 		move.b	#6,obAnim(a0)				; set animation to facenormal2
@@ -455,7 +457,7 @@ BossLabyrinth_Display:
 		move.w	obX(a1),obX(a0)				; move positions to rendered positions
 		move.w	obY(a1),obY(a0)
 		move.b	obStatus(a1),obStatus(a0)		; move object status to boss status
-		moveq	#sprite_xflip|sprite_yflip,d0		; move first 2 bits into d0			
+		moveq	#sprite_xflip|sprite_yflip,d0		; move first 2 bits into d0
 		and.b	obStatus(a0),d0				; AND with obStatus so now d0 contains X and Y logical flip bits only
 		andi.b	#~(sprite_xflip|sprite_yflip),obRender(a0) ; clear the x and y flip
 		or.b	d0,obRender(a0)				; OR the two together, so now DisplaySprite has X and Y orientation and above render bits
