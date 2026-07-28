@@ -25,9 +25,11 @@ BossFinal_ParentObj equ objoff_34			; pointer to main boss controller, also used
 BossFinal_PlasmaPtr equ objoff_36			; pointer to plasma ball object
 BossFinal_CylinderPtr equ objoff_38			; pointer to the start of the Cylinder address table, each entry is 2 bytes, so an 8 byte table ending at off_3F
 BossFinal_CylinderState equ objoff_30			; offset used to store what cylinder Eggman is hiding in (a1), also used as a general attack flag, a0 gets the cylinder index where he will hide in which also is interpreted as "attacking"
-BossFinal_EggmanCylinder equ objoff_29			; offset used to store the status of the cylinder, -1 means Eggman is there, 1 means he is not.
+BossFinal_ChildCmd equ objoff_29			; offset used to store attack states and flags
 BossFinal_HitFlash equ objoff_35			; offset used to keep track of flashing frames (cylinder pointer overwrites the normally used offset)
 BossFinal_ChildCounter equ objoff_32			; offset used to keep track of how many objects tied to the fight are still executing (for phase control)
+EggmanCylinder_Displacement equ objoff_3C		; offset used for a vertical displacement for the cylinder
+EggmanCylinder_FracDisplace equ objoff_3E		; offset that gets written to when doing vertical displacement, ends up being sub pixel values
 
 BossFinal_ObjData:
 		dc.w $100, $100, ArtTile_FZ_Eggman_No_Vehicle	; X pos, Y pos, VRAM setting
@@ -157,8 +159,8 @@ BossFinal_Eggman_Wait:
 
 ; loc_19EA8:
 BossFinal_Eggman_Crush:
-		tst.w	BossFinal_CylinderState(a0)	; test current attack state
-		bpl.s	.checkPosition			; positive or zero, (attacking), branch
+		tst.w	BossFinal_CylinderState(a0)	; has a cylinder pair to move already been picked? (see .loadSelectedPair)
+		bpl.s	.checkPosition			; if yes, branch
 		clr.w	BossFinal_CylinderState(a0)	; clear
 		jsr	(RandomNumber).l		; generate a random number and return
 		andi.w	#$C,d0				; AND to keep the upper two bits of the lower word (this means it will be $0 $4 $8 or $C which is the starting entry of a pair in the cylinder table)
@@ -173,18 +175,21 @@ BossFinal_Eggman_Crush:
 		lea	BossFinal_CylinderPairs(pc),a1	; load data for cylinder pairs to move (which was calculated above)
 		move.w	(a1,d0.w),d0			; load first cylinder in pair
 		move.w	(a1,d1.w),d1			; load second cylinder in pair
-		move.w	d0,BossFinal_CylinderState(a0)	; set cylinder in which Eggman is hiding in (not actual object address yet)
+		move.w	d0,BossFinal_CylinderState(a0)	; set cylinder in which Eggman is hiding in (not actual object address yet) contains either 0 2 4 6
 		moveq	#-1,d2				; set up for full address calculation ($FFFFFFFF)
 		move.w	BossFinal_CylinderPtr(a0,d0.w),d2 ; calculate cylinder object #1 address
 		movea.l	d2,a1				; copy calculated address
 
 ; d0 will always be the Eggman cylinder. The cylinder that he is in swaps based on skipping the exg.l
 ; if d0 contains $4 cylinder and d1 is $6 cylinder, but the random number was negative, then d0 would now contain cylinder $6.
-		move.b	#-1,BossFinal_EggmanCylinder(a1); mark this cylinder as containing Eggman (used for collision later)		
+; this controller is constantly set to the position of the Eggman cylinder down in EggmanCylinder routines, so that when it runs
+; SolidObject, its hitbox is sitting at the Eggman cylinder. this is slightly backwards from other bosses, the cylinder objects write INTO the controller
+; which is why nothing is different between the dummy cylinder, only the occupied cylinder writes up (this is why we are setting things up into a1 and NOT the controller a0)
+		move.b	#-1,BossFinal_ChildCmd(a1)	; set command to move
 		move.w	#-1,BossFinal_CylinderState(a1)	; mark this cylinder as containing Eggman 
 		move.w	BossFinal_CylinderPtr(a0,d1.w),d2 ; calculate cylinder object #2 address
 		movea.l	d2,a1				; copy calculated address
-		move.b	#1,BossFinal_EggmanCylinder(a1) ; mark this cylinder as empty (used for collision later)
+		move.b	#1,BossFinal_ChildCmd(a1) 	; set command to move
 		move.w	#0,BossFinal_CylinderState(a1)	; mark this cylinder as empty
 		move.w	#1,BossFinal_ChildCounter(a0)	; set cylinder object counter (to keep track of fight phase)
 		clr.b	BossFinal_HitFlash(a0)		; clear damage flashing timer
@@ -306,7 +311,7 @@ BossFinal_Eggman_Plasma:
 		tst.w	BossFinal_CylinderState(a0)	; is the plasma currently active (same offset, now re-used for plasma status)
 		bpl.s	.soundWait			; if yes, branch
 		clr.w	BossFinal_CylinderState(a0)	; clear state
-		move.b	#-1,BossFinal_EggmanCylinder(a1); set state to currently attacking (same offset used as above, just re-purposed)
+		move.b	#-1,BossFinal_ChildCmd(a1)	; set state to currently attacking
 		bsr.s	.playSound
 
 ; loc_1A000:
@@ -507,7 +512,6 @@ BossFinal_Eggman_Escape:
 		bne.s	.watchEggman			; if timer is above 0, branch
 		tst.b	obStatus(a0)			; has Eggman been defeated?
 		bpl.s	.setCollision			; if not, branch
-.setDescent:
 		move.w	#$60,obVelY(a0)			; set a slow downward descent
 ; While this bug isn't obvious due to the bugfix below, it is technically still there.
 ; A condition can be met where the exploding cockpit disappears, which then means the explosions do.
@@ -752,7 +756,7 @@ EggmanCylinder_Main:	; Routine
 		move.l	#Map_EggCyl,obMap(a0)
 		move.w	(a1)+,obX(a0)			; copy position and increment
 		move.w	(a1),obY(a0)			; copy Y and don't increment yet
-		move.w	(a1)+,BossFinal_CylinderPtr(a0)	; make a pointer to the cylinder
+		move.w	(a1)+,BossFinal_CylinderPtr(a0)	; store same Y as a base position and increment
 	if FixBugs=0
 		; These are likely the result of the developers fumbling obWidth and
 		; obActWidth, which wasn't completely fixed until REV01.
@@ -766,73 +770,80 @@ EggmanCylinder_Main:	; Routine
 
 ; loc_1A4CE:
 EggmanCylinder_Action: ; Routine 2
-		cmpi.b	#2,obSubtype(a0)		; is this a ceiling cylinder?
-		ble.s	loc_1A4DC			; if yes, branch
-		bset	#sprite_yflip_bit,obRender(a0)	; ground cylinder, flip Y
+		cmpi.b	#2,obSubtype(a0)		; is this a floor cylinder?
+		ble.s	.checkAction			; if yes, branch
+		bset	#sprite_yflip_bit,obRender(a0)	; ceiling cylinder, flip Y
 
-loc_1A4DC:
-		clr.l	objoff_3C(a0)			; 
-		tst.b	BossFinal_EggmanCylinder(a0)	; 
-		beq.s	loc_1A4EA
+; loc_1A4DC:
+.checkAction:
+		clr.l	EggmanCylinder_Displacement(a0)	; clear vertical displacement offset
+		tst.b	BossFinal_ChildCmd(a0)		; are we ready to move?
+		beq.s	EggmanCylinder_UpdatePos	; if not, branch ahead so we don't start moving
 		addq.b	#2,obRoutine(a0)
 
-loc_1A4EA:
-		move.l	objoff_3C(a0),d0
-		move.l	BossFinal_CylinderPtr(a0),d1
-		add.l	d0,d1
-		swap	d1
-		move.w	d1,obY(a0)
-		cmpi.b	#4,obRoutine(a0)
-		bne.s	loc_1A524
-		tst.w	BossFinal_CylinderState(a0)
-		bpl.s	loc_1A524
-		moveq	#-$A,d0
-		cmpi.b	#2,obSubtype(a0)
-		ble.s	loc_1A514
-		moveq	#$E,d0
+; loc_1A4EA:
+EggmanCylinder_UpdatePos:
+		move.l	EggmanCylinder_Displacement(a0),d0 ; copy how far we have traveled
+		move.l	BossFinal_CylinderPtr(a0),d1	; copy base position
+		add.l	d0,d1				; current position
+		swap	d1				; swap so that base pixels are in lower word
+		move.w	d1,obY(a0)			; set base pixels to object Y
+		cmpi.b	#4,obRoutine(a0)		; are we ready to go to the move routine?
+		bne.s	.calcFloorFrame			; if not, branch
+		tst.w	BossFinal_CylinderState(a0)	; is this cylinder the one holding Eggman?
+		bpl.s	.calcFloorFrame			; if not, branch
+		moveq	#-$A,d0				; floor cylinder, move 10 pixels up from origin
+		cmpi.b	#2,obSubtype(a0)		; is it a floor cylinder?
+		ble.s	.setPosition			; if yes (0 or 2) branch
+		moveq	#$E,d0				; must be ceiling, move 14 pixels down
 
-loc_1A514:
-		add.w	d0,d1
-		movea.l	BossFinal_ParentObj(a0),a1
-		move.w	d1,obY(a1)
+; loc_1A514:
+.setPosition:
+		add.w	d0,d1				; add offset + cylinder position
+		movea.l	BossFinal_ParentObj(a0),a1	; copy Eggman object address
+		move.w	d1,obY(a1)			; write into Eggman's Y and X (now Eggman's code in BossFinal_Eggman_Crush will run and set his hitbox and check for his collision)
 		move.w	obX(a0),obX(a1)
 
-loc_1A524:
-		move.w	#64/2+sonic_solid_width,d1
+; loc_1A524:
+.calcFloorFrame:
+		move.w	#64/2+sonic_solid_width,d1	; set up collision and jsr to SolidObject to calculate hitbox
 		move.w	#192/2,d2
 		move.w	#194/2,d3
 		move.w	obX(a0),d4
 		jsr	(SolidObject).l
-		moveq	#0,d0
-		move.w	objoff_3C(a0),d1
-		bpl.s	loc_1A550
-		neg.w	d1
-		subq.w	#8,d1
-		bcs.s	loc_1A55C
-		addq.b	#1,d0
-		asr.w	#4,d1
-		add.w	d1,d0
-		bra.s	loc_1A55C
+		moveq	#0,d0				; set initial sprite frame
+		move.w	EggmanCylinder_Displacement(a0),d1 ; copy the pixel half only (3C to 3D offset) first runthrough this is 0 due to the clr.l above
+		bpl.s	.calcCeilingFrame		; if positive (ceiling) branch
+		neg.w	d1				; negative (floor) so make it positive
+		subq.w	#8,d1				; have we traveled 8 pixels yet?
+		bcs.s	.checkOffscreen			; no (there was a carry) so branch
+		addq.b	#1,d0				; increment sprite frame
+		asr.w	#4,d1				; divide by 16
+		add.w	d1,d0				; add sprite frame to division result (this means every 16 pixels a new frame is loaded, EXCEPT after the first 8 pixels a new frame is loaded)
+		bra.s	.checkOffscreen
 ; ===========================================================================
 
-loc_1A550:
-		subi.w	#$27,d1
-		bcs.s	loc_1A55C
-		addq.b	#1,d0
-		asr.w	#4,d1
-		add.w	d1,d0
+; loc_1A550:
+.calcCeilingFrame:
+		subi.w	#$27,d1				; have we traveled 39 pixels yet?
+		bcs.s	.checkOffscreen			; no (there was a carry) so branch
+		addq.b	#1,d0				; increment sprite frame
+		asr.w	#4,d1				; divide by 16
+		add.w	d1,d0				; add sprite frame to division result (this means every 16 pixels a new frame is loaded, EXCEPT after the first 39 pixels a new frame is loaded)
 
-loc_1A55C:
-		move.b	d0,obFrame(a0)
-		move.w	(v_player+obX).w,d0
-		sub.w	obX(a0),d0
-		bmi.s	loc_1A578
-		subi.w	#$140,d0
-		bmi.s	loc_1A578
-		tst.b	obRender(a0)
-		bpl.w	EggmanCylinder_Delete
+; loc_1A55C:
+.checkOffscreen:
+		move.b	d0,obFrame(a0)			; set sprite frame
+		move.w	(v_player+obX).w,d0		; copy Sonic's X
+		sub.w	obX(a0),d0			; subtract Sonic's X and cylinder X
+		bmi.s	.exit				; Sonic is left of cylinder, branch
+		subi.w	#$140,d0			; subtract 320 (a screen's width) from Sonic's position
+		bmi.s	.exit				; Sonic is still within a screen's width to the cylinder, branch
+		tst.b	obRender(a0)			; is the cylinder currently on screen?
+		bpl.w	EggmanCylinder_Delete		; if not, branch (you can't move back left post-Eggman defeat so this is a guaranteed way to delete the cylinders)
 
-loc_1A578:
+; loc_1A578:
+.exit:
 		jmp	(DisplaySprite).l
 ; ===========================================================================
 
@@ -840,9 +851,9 @@ loc_1A578:
 EggmanCylinder_Move: ; Routine 4
 		moveq	#0,d0
 		move.b	obSubtype(a0),d0
-		move.w	EggmanCylinder_Move_Index(pc,d0.w),d0
-		jsr	EggmanCylinder_Move_Index(pc,d0.w)
-		bra.w	loc_1A4EA
+		move.w	EggmanCylinder_Move_Index(pc,d0.w),d0 ;  use the object subtype and Move_Index to calculate our offset and determine top or bottom cylinder
+		jsr	EggmanCylinder_Move_Index(pc,d0.w) ; jump (but return) into the table and use our offset to pick a routine
+		bra.w	EggmanCylinder_UpdatePos	; when done, go and update cylinder position
 ; ===========================================================================
 EggmanCylinder_Move_Index:
 		dc.w EggmanCylinder_Bottom-EggmanCylinder_Move_Index	; bottom left
@@ -853,78 +864,86 @@ EggmanCylinder_Move_Index:
 
 ; loc_1A598:
 EggmanCylinder_Bottom:
-		tst.b	BossFinal_EggmanCylinder(a0)
-		bne.s	loc_1A5D4
-		movea.l	BossFinal_ParentObj(a0),a1
-		tst.b	obBossHits(a1)
-		bne.s	loc_1A5B4
-		bsr.w	BossDefeated
-		subi.l	#$10000,objoff_3C(a0)
+		tst.b	BossFinal_ChildCmd(a0)		; are we currently attacking?
+		bne.s	.extend				; if yes, branch
+		movea.l	BossFinal_ParentObj(a0),a1	; copy Eggman's address
+		tst.b	obBossHits(a1)			; are there any hits left?
+		bne.s	.retract			; if yes, branch
+		bsr.w	BossDefeated			
+		subi.l	#$10000,EggmanCylinder_Displacement(a0) ; retract cylinder at half speed (20000 - 10000)
 
-loc_1A5B4:
-		addi.l	#$20000,objoff_3C(a0)
-		bcc.s	locret_1A602
-		clr.l	objoff_3C(a0)
-		movea.l	BossFinal_ParentObj(a0),a1
-		subq.w	#1,BossFinal_ChildCounter(a1)
-		clr.w	BossFinal_CylinderState(a1)
-		subq.b	#2,obRoutine(a0)
+; loc_1A5B4:
+.retract:
+		addi.l	#$20000,EggmanCylinder_Displacement(a0) ; retract at 2px a frame
+		bcc.s	.exit				; have we reached home (was there a carry)? if not, branch
+		clr.l	EggmanCylinder_Displacement(a0)	; clear displacement and go right back to 0
+		movea.l	BossFinal_ParentObj(a0),a1	; copy Eggman's address
+		subq.w	#1,BossFinal_ChildCounter(a1)	; tell Eggman an object is done executing
+		clr.w	BossFinal_CylinderState(a1)	; clear Eggman's cylinder status (hiding or not hiding in it)
+		subq.b	#2,obRoutine(a0)		; go back to the Action routine
 		rts
 ; ===========================================================================
 
-loc_1A5D4:
-		cmpi.w	#-$10,objoff_3C(a0)
-		bge.s	loc_1A5E4
-		subi.l	#$28000,objoff_3C(a0)
+; loc_1A5D4:
+.extend:
+		cmpi.w	#-$10,EggmanCylinder_Displacement(a0) ; has the cylinder traveled more than 16 pixels?
+		bge.s	.checkExtension			; if not, branch
+		subi.l	#$28000,EggmanCylinder_Displacement(a0) ; yes, add 2.5px of speed
 
-loc_1A5E4:
-		subi.l	#$8000,objoff_3C(a0)
-		cmpi.w	#-$A0,objoff_3C(a0)
-		bgt.s	locret_1A602
-		clr.w	objoff_3E(a0)
-		move.w	#-$A0,objoff_3C(a0)
-		clr.b	BossFinal_EggmanCylinder(a0)
+; loc_1A5E4:
+.checkExtension:
+		subi.l	#$8000,EggmanCylinder_Displacement(a0) ; base value of 0.5px a frame
+		cmpi.w	#-$A0,EggmanCylinder_Displacement(a0) ; has the full extension been reached?
+		bgt.s	.exit				; if not, branch
+		clr.w	EggmanCylinder_FracDisplace(a0) ; clear fractional movement
+		move.w	#-$A0,EggmanCylinder_Displacement(a0) ; snap to full extension
+		clr.b	BossFinal_ChildCmd(a0)		; clear attacking flag
 
-locret_1A602:
+; locret_1A602:
+.exit:
 		rts
 ; ===========================================================================
 
 ; loc_1A604:
 EggmanCylinder_Top:
-		bset	#sprite_yflip_bit,obRender(a0)
-		tst.b	BossFinal_EggmanCylinder(a0)
-		bne.s	loc_1A646
-		movea.l	BossFinal_ParentObj(a0),a1
-		tst.b	obBossHits(a1)
-		bne.s	loc_1A626
+		bset	#sprite_yflip_bit,obRender(a0)	; flip sprite to face downwards
+		tst.b	BossFinal_ChildCmd(a0)		; are we currently attacking?
+		bne.s	.extend				; if yes, branch
+		movea.l	BossFinal_ParentObj(a0),a1	; copy Eggman's address
+		tst.b	obBossHits(a1)			; are there any hits left?
+		bne.s	.retract			; if yes, branch
 		bsr.w	BossDefeated
-		addi.l	#$10000,objoff_3C(a0)
+		addi.l	#$10000,EggmanCylinder_Displacement(a0) ; retract cylinder at half speed (20000 - 10000) 
 
-loc_1A626:
-		subi.l	#$20000,objoff_3C(a0)
-		bcc.s	locret_1A674
-		clr.l	objoff_3C(a0)
-		movea.l	BossFinal_ParentObj(a0),a1
-		subq.w	#1,BossFinal_ChildCounter(a1)
-		clr.w	BossFinal_CylinderState(a1)
-		subq.b	#2,obRoutine(a0)
+; loc_1A626:
+.retract:
+		subi.l	#$20000,EggmanCylinder_Displacement(a0) ; retract 2px a frame
+		bcc.s	.exit				; have we reached home (was there a carry)? if not, branch
+		clr.l	EggmanCylinder_Displacement(a0) ; clear displacement and go right back to 0
+		movea.l	BossFinal_ParentObj(a0),a1	; copy Eggman's address
+		subq.w	#1,BossFinal_ChildCounter(a1)	; tell Eggman an object is done executing
+		clr.w	BossFinal_CylinderState(a1)	; clear Eggman's cylinder status (hiding or not hiding in it)
+		subq.b	#2,obRoutine(a0)		; go back to the Action routine
 		rts
 ; ===========================================================================
 
-loc_1A646:
-		cmpi.w	#$10,objoff_3C(a0)
-		blt.s	loc_1A656
-		addi.l	#$28000,objoff_3C(a0)
+; loc_1A646:
+.extend:
+		cmpi.w	#$10,EggmanCylinder_Displacement(a0) ; has the cylinder traveled more than 16 pixels?
+		blt.s	.checkExtension			; if not, branch
+		addi.l	#$28000,EggmanCylinder_Displacement(a0) ; yes, add 2.5px of speed
 
-loc_1A656:
-		addi.l	#$8000,objoff_3C(a0)
-		cmpi.w	#$A0,objoff_3C(a0)
-		blt.s	locret_1A674
-		clr.w	objoff_3E(a0)
-		move.w	#$A0,objoff_3C(a0)
-		clr.b	BossFinal_EggmanCylinder(a0)
+; loc_1A656:
+.checkExtension:
+		addi.l	#$8000,EggmanCylinder_Displacement(a0)	; base value of 0.5px a frame
+		cmpi.w	#$A0,EggmanCylinder_Displacement(a0)	; has the full extension been reached?
+		blt.s	.exit					; if not, branch
+		clr.w	EggmanCylinder_FracDisplace(a0)		; clear fractional movement
+		move.w	#$A0,EggmanCylinder_Displacement(a0)	; snap to full extension
+		clr.b	BossFinal_ChildCmd(a0)			; clear attacking flag
 
-locret_1A674:
+; locret_1A674
+.exit:
 		rts
 ; ===========================================================================
 
@@ -939,9 +958,9 @@ Map_EggCyl:	include	"_maps/FZ Eggman's Cylinders.asm"
 
 BossPlasma:
 		moveq	#0,d0
-		move.b	obRoutine(a0),d0
-		move.w	BossPlasma_Index(pc,d0.w),d0
-		jmp	BossPlasma_Index(pc,d0.w)
+		move.b	obRoutine(a0),d0			
+		move.w	BossPlasma_Index(pc,d0.w),d0		; use the object routine index and BossPlasma_Index to calculate our offset
+		jmp	BossPlasma_Index(pc,d0.w)		; jump into the table and use our offset to pick a routine
 ; ===========================================================================
 BossPlasma_Index:
 		dc.w BossPlasma_Main-BossPlasma_Index
@@ -952,128 +971,138 @@ BossPlasma_Index:
 ; ===========================================================================
 
 BossPlasma_Main:	; Routine 0
-		move.w	#boss_fz_x+$138,obX(a0)
+		move.w	#boss_fz_x+$138,obX(a0)			; set initial X and Y
 		move.w	#boss_fz_y+$2C,obY(a0)
-		move.w	#ArtTile_FZ_Boss,obGfx(a0)
+		move.w	#ArtTile_FZ_Boss,obGfx(a0)		; load art and mappings
 		move.l	#Map_PLaunch,obMap(a0)
-		move.b	#0,obAnim(a0)
-		move.b	#3,obPriority(a0)
+		move.b	#0,obAnim(a0)				; set initial animation frame
+		move.b	#3,obPriority(a0)			; set priority, width, and height
 		move.b	#16/2,obWidth(a0)
 		move.b	#16/2,obHeight(a0)
-		move.b	#sprite_cam_field,obRender(a0)
+		move.b	#sprite_cam_field,obRender(a0)		; set render bits
 		bset	#sprite_rendered_bit,obRender(a0)
-		addq.b	#2,obRoutine(a0)
+		addq.b	#2,obRoutine(a0)			; increment routine
 
 BossPlasma_Generator:; Routine 2
-		movea.l	BossFinal_ParentObj(a0),a1
-		cmpi.b	#6,BossFinal_ParentObj(a1)
-		bne.s	loc_1A850
-		move.b	#id_Explosion,obID(a0)
-		move.b	#0,obRoutine(a0)
+		movea.l	BossFinal_ParentObj(a0),a1		; copy Eggman's address
+		cmpi.b	#6,BossFinal_ParentObj(a1)		; are we in routine 6 (Fall routine)?
+		bne.s	.checkStatus				; if not, branch
+		move.b	#id_Explosion,obID(a0)			; change object to explosion
+		move.b	#0,obRoutine(a0)			; set object routine of new explosion object
 		jmp	(DisplaySprite).l
 ; ===========================================================================
 
-loc_1A850:
-		move.b	#0,obAnim(a0)
-		tst.b	BossFinal_EggmanCylinder(a0)
-		beq.s	loc_1A86C
-		addq.b	#2,obRoutine(a0)
-		move.b	#1,obAnim(a0)
-		move.b	#$3E,obSubtype(a0)
+; loc_1A850:
+.checkStatus:
+		move.b	#0,obAnim(a0)				; set animation to 0
+		tst.b	BossFinal_ChildCmd(a0)			; has the controller told us to attack?
+		beq.s	BossPlasma_Collision			; if not, branch
+		addq.b	#2,obRoutine(a0)			; increment to MakeBalls
+		move.b	#1,obAnim(a0)				; set animation to 1
+		move.b	#62,obSubtype(a0)			; use offset to set a timer
 
-loc_1A86C:
-		move.w	#16/2+sonic_solid_width,d1
+; loc_1A86C:
+BossPlasma_Collision:
+		move.w	#16/2+sonic_solid_width,d1		; set up collision
 		move.w	#16/2,d2
 		move.w	#34/2,d3
 		move.w	obX(a0),d4
 		jsr	(SolidObject).l
-		move.w	(v_player+obX).w,d0
-		sub.w	obX(a0),d0
-		bmi.s	loc_1A89A
-		subi.w	#$140,d0
-		bmi.s	loc_1A89A
-		tst.b	obRender(a0)
-		bpl.w	EggmanCylinder_Delete
+		move.w	(v_player+obX).w,d0			; copy Sonic's X
+		sub.w	obX(a0),d0				; subtract with plasma's X
+		bmi.s	.display				; if Sonic is to the left of the plasma, branch
+		subi.w	#$140,d0				; subtract 320 (a screen's width) from Sonic's position
+		bmi.s	.display				; Sonic is within a screen's width, branch
+		tst.b	obRender(a0)				; is the plasma currently on screen?
+		bpl.w	EggmanCylinder_Delete			; if so, branch
 
-loc_1A89A:
+; loc_1A89A:
+.display:
 		lea	Ani_PLaunch(pc),a1
 		jsr	(AnimateSprite).l
 		jmp	(DisplaySprite).l
 ; ===========================================================================
 
 BossPlasma_MakeBalls:; Routine 4
-		tst.b	BossFinal_EggmanCylinder(a0)
-		beq.w	loc_1A954
-		clr.b	BossFinal_EggmanCylinder(a0)
-		add.w	BossFinal_CylinderState(a0),d0
+		tst.b	BossFinal_ChildCmd(a0)			; are we currently attacking?
+		beq.w	.checkStatus				; if not, branch
+		clr.b	BossFinal_ChildCmd(a0)			; clear flag so it only runs once
+
+; Seemingly dead code here as a2 is never used anywhere, possibly an old table lookup?
+		add.w	BossFinal_CylinderState(a0),d0		
 		andi.w	#$1E,d0
 		adda.w	d0,a2
-		addq.w	#4,BossFinal_CylinderState(a0)
-		clr.w	BossFinal_ChildCounter(a0)
-		moveq	#3,d2
 
-BossPlasma_Loop:
+		addq.w	#4,BossFinal_CylinderState(a0)		; increment spread offset
+		clr.w	BossFinal_ChildCounter(a0)		; clear ball counter
+		moveq	#3,d2					; set to loop 4 times
+
+; BossPlasma_Loop:
+.loop:
 		jsr	(FindNextFreeObj).l
-		bne.w	loc_1A954
-		move.b	#id_BossPlasma,obID(a1)
-		move.w	obX(a0),obX(a1)
-		move.w	#boss_fz_y+$2C,obY(a1)
-		move.b	#8,obRoutine(a1)
-		move.w	#ArtTile_FZ_Boss|Tile_Pal2,obGfx(a1)
-		move.l	#Map_Plasma,obMap(a1)
-		move.b	#24/2,obHeight(a1)
+		bne.w	.checkStatus				; no free objects found, branch
+		move.b	#id_BossPlasma,obID(a1)			; set object ID to plasma
+		move.w	obX(a0),obX(a1)				; copy position
+		move.w	#boss_fz_y+$2C,obY(a1)			; set Y location
+		move.b	#8,obRoutine(a1)			; set routine to Balls
+		move.w	#ArtTile_FZ_Boss|Tile_Pal2,obGfx(a1)	; copy art and mappings
+		move.l	#Map_Plasma,obMap(a1)			
+		move.b	#24/2,obHeight(a1)			; copy height and collisions
 		move.b	#24/2,obWidth(a1)
 		move.b	#col_none,obColType(a1)
-		move.b	#3,obPriority(a1)
-		move.w	#$3E,obSubtype(a1)
-		move.b	#sprite_cam_field,obRender(a1)
+		move.b	#3,obPriority(a1)			; set priority
+		move.w	#62,obSubtype(a1)			; set timer and also zero out ChildCmd
+		move.b	#sprite_cam_field,obRender(a1)		; set render bits
 		bset	#sprite_rendered_bit,obRender(a1)
-		move.l	a0,BossFinal_ParentObj(a1)
+		move.l	a0,BossFinal_ParentObj(a1)		; copy parent object address
 		jsr	(RandomNumber).l
-		move.w	BossFinal_ChildCounter(a0),d1
+		move.w	BossFinal_ChildCounter(a0),d1		; copy back since RandomNumber also uses d1
 	if FixBugs
 		; compensation for the fix in BossPlasma_Drop
-		muls.w	#-$59,d1
+		muls.w	#-$59,d1				; spacing for balls
 	else
 		muls.w	#-$4F,d1
 	endif
-		addi.w	#boss_fz_x+$128,d1
-		andi.w	#$1F,d0
-		subi.w	#$10,d0
-		add.w	d1,d0
-		move.w	d0,BossFinal_CylinderState(a1)
-		addq.w	#1,BossFinal_ChildCounter(a0)
-		move.w	BossFinal_ChildCounter(a0),BossFinal_CylinderPtr(a0)
-		dbf	d2,BossPlasma_Loop	; repeat sequence 3 more times
+		addi.w	#boss_fz_x+$128,d1			; start at the rightmost position
+		andi.w	#$1F,d0					; AND to keep 5 bits of the random number (0-31)
+		subi.w	#$10,d0					; subtract by 16 to center it
+		add.w	d1,d0					; set ball offset
+		move.w	d0,BossFinal_CylinderState(a1)		; store the ball's target X (offset reused)
+		addq.w	#1,BossFinal_ChildCounter(a0)		; count this ball
+		move.w	BossFinal_ChildCounter(a0),BossFinal_CylinderPtr(a0) ; copy counter
+		dbf	d2,.loop				; repeat sequence 3 more times
 
-loc_1A954:
-		tst.w	BossFinal_ChildCounter(a0)
-		bne.s	loc_1A95E
-		addq.b	#2,obRoutine(a0)
+; loc_1A954:
+.checkStatus:
+		tst.w	BossFinal_ChildCounter(a0)		; are there still balls that need to reach their X position before dropping? (modified down in Plasma_Balls)
+		bne.s	.exit					; if yes, exit
+		addq.b	#2,obRoutine(a0)			; increment to Finish
 
-loc_1A95E:
-		bra.w	loc_1A86C
+; loc_1A95E:
+.exit:
+		bra.w	BossPlasma_Collision
 ; ===========================================================================
 
 ; loc_1A962:
 BossPlasma_Finish: ; Routine 6
-		move.b	#2,obAnim(a0)
-		tst.w	BossFinal_CylinderPtr(a0)
-		bne.s	loc_1A97E
-		move.b	#2,obRoutine(a0)
-		movea.l	BossFinal_ParentObj(a0),a1
-		move.w	#-1,BossFinal_ChildCounter(a1)
+		move.b	#2,obAnim(a0)				; set animation type for launcher
+		tst.w	BossFinal_CylinderPtr(a0)		; are there any balls still alive?
+		bne.s	.exit					; if yes, exit
+		move.b	#2,obRoutine(a0)			; set routine to Generator
+		movea.l	BossFinal_ParentObj(a0),a1		; copy Eggman's address
+		move.w	#-1,BossFinal_ChildCounter(a1)		; relay signal that balls are all gone
 
-loc_1A97E:
-		bra.w	loc_1A86C
+; loc_1A97E:
+.exit:
+		bra.w	BossPlasma_Collision
 ; ===========================================================================
 
 ; loc_1A982:
 BossPlasma_Balls: ; Routine 8
 		moveq	#0,d0
 		move.b	ob2ndRout(a0),d0
-		move.w	BossPlasma_Index2(pc,d0.w),d0
-		jsr	BossPlasma_Index2(pc,d0.w)
+		move.w	BossPlasma_Index2(pc,d0.w),d0		; use the object routine index and BossPlasma_Index2 to calculate our offset
+		jsr	BossPlasma_Index2(pc,d0.w)		; jump into the table and use our offset to pick a routine
 		lea	Ani_Plasma(pc),a1
 		jsr	(AnimateSprite).l
 		jmp	(DisplaySprite).l
@@ -1086,24 +1115,24 @@ BossPlasma_Index2:
 
 ; loc_1A9A6:
 BossPlasma_Spread:
-		move.w	BossFinal_CylinderState(a0),d0
-		sub.w	obX(a0),d0
-		asl.w	#4,d0
-		move.w	d0,obVelX(a0)
-		move.w	#$B4,obSubtype(a0)
-		addq.b	#2,ob2ndRout(a0)
+		move.w	BossFinal_CylinderState(a0),d0		; copy target X (reused offset)
+		sub.w	obX(a0),d0				; subtract distance from generator to target
+		asl.w	#4,d0					; multiply by 16
+		move.w	d0,obVelX(a0)				; set that as velocity
+		move.w	#180,obSubtype(a0)			; set a timer for 180 frames
+		addq.b	#2,ob2ndRout(a0)			; increment to Drop
 		rts
 ; ===========================================================================
 
 ; loc_1A9C0:
 BossPlasma_Drop:
-		tst.w	obVelX(a0)
-		beq.s	loc_1A9E6
-		jsr	(SpeedToPos).l
-		move.w	obX(a0),d0
-		sub.w	BossFinal_CylinderState(a0),d0
-		bcc.s	loc_1A9E6
-		clr.w	obVelX(a0)
+		tst.w	obVelX(a0)				; are we currently set to move?
+		beq.s	.aim					; if not, branch
+		jsr	(SpeedToPos).l				; calculate movement
+		move.w	obX(a0),d0				; copy current X
+		sub.w	BossFinal_CylinderState(a0),d0		; subtract current X from target X
+		bcc.s	.aim					; have we reached the target starting X? if not, branch (moving from right to left so if there is no carry, then too far left)
+		clr.w	obVelX(a0)				; target reached, stop
 	if FixBugs
 		sub.w	d0,obX(a0)
 	else
@@ -1114,37 +1143,40 @@ BossPlasma_Drop:
 		movea.l	BossFinal_ParentObj(a0),a1
 		subq.w	#1,BossFinal_ChildCounter(a1)
 
-loc_1A9E6:
-		move.b	#0,obAnim(a0)
-		subq.w	#1,obSubtype(a0)
-		bne.s	locret_1AA1C
-		addq.b	#2,ob2ndRout(a0)
-		move.b	#1,obAnim(a0)
-		move.b	#col_24x24|col_hurt,obColType(a0)
-		move.w	#$B4,obSubtype(a0)
-		moveq	#0,d0
-		move.w	(v_player+obX).w,d0
-		sub.w	obX(a0),d0
-		move.w	d0,obVelX(a0)
-		move.w	#$140,obVelY(a0)
+; loc_1A9E6:
+.aim:
+		move.b	#0,obAnim(a0)				; set animation type to hovering
+		subq.w	#1,obSubtype(a0)			; decrement timer
+		bne.s	.exit					; not ready to drop yet, exit
+		addq.b	#2,ob2ndRout(a0)			; increment routine to Move
+		move.b	#1,obAnim(a0)				; set animation type to attacking
+		move.b	#col_24x24|col_hurt,obColType(a0)	; enable collision
+		move.w	#180,obSubtype(a0)			; set another timer for 180 frames
+		moveq	#0,d0					
+		move.w	(v_player+obX).w,d0			; copy Sonic's X
+		sub.w	obX(a0),d0				; subtract ball position
+		move.w	d0,obVelX(a0)				; aim in the direction of Sonic
+		move.w	#$140,obVelY(a0)			; start falling downwards
 
-locret_1AA1C:
+; locret_1AA1C:
+.exit:
 		rts
 ; ===========================================================================
 
 ; loc_1AA1E:
 BossPlasma_Move:
 		jsr	(SpeedToPos).l
-		cmpi.w	#boss_fz_y+$D0,obY(a0)
-		bhs.s	loc_1AA34
-		subq.w	#1,obSubtype(a0)
-		beq.s	loc_1AA34
+		cmpi.w	#boss_fz_y+$D0,obY(a0)			; have we reached the bottom of the screen?
+		bhs.s	.deleteChild				; if not, branch
+		subq.w	#1,obSubtype(a0)			; decrement timer
+		beq.s	.deleteChild				; has timer hit 0? if so, branch
 		rts
 ; ===========================================================================
 
-loc_1AA34:
-		movea.l	BossFinal_ParentObj(a0),a1
-		subq.w	#1,BossFinal_CylinderPtr(a1)
+; loc_1AA34:
+.deleteChild:
+		movea.l	BossFinal_ParentObj(a0),a1		; copy ball launcher's address
+		subq.w	#1,BossFinal_CylinderPtr(a1)		; decrement ball count
 	if FixBugs
 		; Avoid returning to BossPlasma_Balls to prevent a display-and-delete bug.
 		addq.l	#4,sp
