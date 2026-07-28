@@ -260,7 +260,7 @@ FFloor_Solid:
 		neg.b	d0				; negate, then sign extend
 		ext.w	d0
 		addq.w	#8,d0				; calculate the number of blocks left to break
-		asl.w	#4,d0				; shift left 4 bits, this calculates the width of the remaining bride
+		asl.w	#4,d0				; shift left 4 bits, this calculates the width of the remaining bridge
 		move.w	#boss_sbz2_x+$B0,d4		; set an anchor point on the right side
 		sub.w	d0,d4				; subtract anchor from remaining width/2 to get the center
 		move.b	d0,obActWid(a0)			; set object width to remaining width
