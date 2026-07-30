@@ -17,19 +17,19 @@ SStom_Index:	dc.w SStom_Main-SStom_Index		; 0
 
 sstom_origX:	equ objoff_30	; initial X-position per child object
 sstom_currentX:	equ objoff_32	; current relative X-offset for stomping (8.8 fixed)
-sstom_length:	equ objoff_34	; stomper length sset from SStom_Len
+sstom_length:	equ objoff_34	; stomper length set from SStom_Len
 sstom_retract:	equ objoff_36	; flag set if stomper is currently slowly retracting
 sstom_delay:	equ objoff_38	; delay after stomper has fully extended before retracting
 sstom_origX_2:	equ objoff_3A	; initial X-position for parent
 sstom_parent:	equ objoff_3C	; parent stomper object (main block)
-
 ; ===========================================================================
+
 SStom_Var:	;	routine	 x-pos	frame
 		dc.b	2,  	 4,	0	; main block
 		dc.b	4,	-$1C,	1	; spikes
 		dc.b	8,	 $34,	3	; pole
 		dc.b	6,	 $28,	2	; wall bracket
-		
+
 SStom_Len:	; Consider reducing the "long" size to $9000, along with the fixing the mappings
 		; to fix the pole being too short. The full length is too large.
 		dc.w $3800	; subtype 00 - short length

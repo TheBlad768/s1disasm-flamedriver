@@ -18,10 +18,9 @@ mblock_origY:		equ objoff_32	; initial Y-position
 mblock_slide_wait:	equ objoff_34	; (subtype 9/A only) delay before red sliding floor moves back
 mblock_slide_goback:	equ objoff_36	; (subtype 9/A only) set if red sliding floor is currently moving back
 
-	if FixBugs
+    if FixBugs
 mblock_fix_storeX:	equ objoff_38	; (FixBugs only) stores X-position around MBlock_Move to avoid stack pointer corruption
-mblock_fix_raft:	equ objoff_3F	; (FixBugs only) flag set to make platform align with water surface
-	endif
+    endif
 ; ===========================================================================
 
 MBlock_Var:	; width, frame
@@ -100,7 +99,7 @@ MBlock_StandOn:	; Routine 4
 ; ---------------------------------------------------------------------------
 
 ; MBlock_ChkDel:
-MBlock_DisplayOrDelete:	
+MBlock_DisplayOrDelete:
 		out_of_range.w	DeleteObject,mblock_origX(a0)	; has platform gone out of range? if yes, delete it
 		bra.w	DisplaySprite				; display platform sprite
 
@@ -154,13 +153,6 @@ MBlock_LeftRight:
 
 ; Type 2/4/9 - stationary, advances to next subtype when stood on (3/5/A)
 MBlock_NextWhenStoodOn:
-	if FixBugs
-		; Align secret LZ1 raft with water surface
-		tst.b	mblock_fix_raft(a0)			; is raft flag set?
-		beq.s	.noSurface				; if not, branch
-		move.w	(v_waterpos1).w,obY(a0)			; align platform with water surface
-	.noSurface:
-	endif
 		cmpi.b	#4,obRoutine(a0)			; is Sonic standing on the platform?
 		bne.s	.return					; if not, branch
 		addq.b	#1,obSubtype(a0)			; if yes, go to next subtype in list
@@ -188,14 +180,6 @@ MBlock_Right_StopOnWall:
 
 ; Type 5 (set from Type 4) - moves right, advances to Type 6 on wall hit (falling down)
 MBlock_Right_FallOnWall:
-	if FixBugs
-		; Align secret LZ1 raft with water surface
-		tst.b	mblock_fix_raft(a0)			; is raft flag set?
-		beq.s	.noSurface				; if not, branch
-		move.w	(v_waterpos1).w,obY(a0)			; align platform with water surface
-	.noSurface:
-	endif
-
 		moveq	#0,d3					; clear d3
 		move.b	obActWid(a0),d3				; use platform half-width as pixels to look ahead
 		bsr.w	ObjHitWallRight				; get distance to platform right edge and nearest wall
@@ -213,7 +197,7 @@ MBlock_Right_FallOnWall:
 
 ; Type 6 (set from type 5) - falls down, advances to Type 0 on floor hit (stationary)
 MBlock_FallingDown:
-		bsr.w	SpeedToPos				; update plaform position as it falls down
+		bsr.w	SpeedToPos				; update platform position as it falls down
 		addi.w	#$18,obVelY(a0)				; make the platform fall faster
 
 		bsr.w	ObjFloorDist				; get distance to floor
@@ -232,9 +216,6 @@ MBlock_SecretLZ1Raft:
 		tst.b	(f_switch+2).w				; has switch number 02 been pressed?
 		beq.s	.hidePlatform				; if not, branch
 		subq.b	#3,obSubtype(a0)			; change platform to type 04 (stationary, moves right when stood on, drops on wall hit)
-	if FixBugs
-		move.b	#1,mblock_fix_raft(a0)			; align secret LZ1 raft with water surface
-	endif
 
 	.hidePlatform:
 		; This line, combined with the coordinate being pushed

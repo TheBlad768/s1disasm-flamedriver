@@ -33,8 +33,13 @@ Roll_Main:	; Routine 0
 		move.b	#sprite_cam_field,obRender(a0)		; set to playfield-positioned mode
 		move.b	#4,obPriority(a0)			; set sprite priority
 		move.b	#32/2,obActWid(a0)			; set sprite display width
-
 	.hide:
+
+	if FixBugs
+		; Fix badnik invisibly falling forever if it doesn't have a floor beneath it
+		cmpi.w	#$7FF,obY(a0)				; has object fallen below max level height?
+		bhi.w	DeleteObject				; if yes, delete it
+	endif
 		rts						; return (and do NOT display sprite yet)
 ; ===========================================================================
 
@@ -53,7 +58,7 @@ Roll_Action:	; Routine 2
 		; This is an exact copy-paste of the RememberState subroutine, except that
 		; it uses bgt instead of bhi for the offscreen check. As a result, Rollers
 		; cannot despawn when going too far offscreen to the left, which can cause
-		; occasional double spawnings. It's not exactly clear if this behavior was
+		; occasional double spawning. It's not exactly clear if this behavior was
 		; intended or if it's an oversight, but it's definitely very inconsistent.
 		move.w	obX(a0),d0
 		andi.w	#$FF80,d0

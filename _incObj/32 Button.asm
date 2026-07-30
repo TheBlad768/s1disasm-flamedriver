@@ -54,7 +54,10 @@ But_Pressed:	; Routine 2
 		moveq	#0,d3					; use bit 0 for the pressed state flag
 
 		; This alters the target bit in the switch status array to be 7 instead of 0
-		; if subtype 6 is set. It goes completely unused in the entire game.
+		; if subtype 6 is set. It's never used anywhere in the game, but it does have
+		; one relevant implementation in Object 56 for the LZ doors, which would allow
+		; switches to CLOSE doors again (see FBlock_LZSmallDoor_Close).
+		; This likely got cut for being... kinda pointless, and prone to soft locks.
 		btst	#6,obSubtype(a0)			; is "alternate flag" state set? (unused)
 		beq.s	.checkMZ1Block				; if not, branch
 		moveq	#7,d3					; use bit 7 for the pressed state flag instead
@@ -123,7 +126,7 @@ But_Pressed:	; Routine 2
 ; ===========================================================================
 ; ---------------------------------------------------------------------------
 ; Subroutine to handle the special button in Marble Zone act 1 that
-; gets pressed down by a pushable block to raise a spiked chaindelier
+; gets pressed down by a pushable block to raise a spiked chandelier
 ;
 ; output:
 ;	d0 = 1 if block is on top of button, 0 if not

@@ -47,14 +47,14 @@ Bonus_Touched:	; Sonic hit the invisible marker
 		move.b	#0,obPriority(a0)			; set to maximum sprite priority
 		move.b	#32/2,obActWid(a0)			; set sprite display width
 
-		move.b	obSubtype(a0),obFrame(a0)		; use subtype as frame ID 
+		move.b	obSubtype(a0),obFrame(a0)		; use subtype as frame ID
 		move.w	#120-1,bonus_timelen(a0)		; set display time to 2 seconds
 		move.w	#sfx_Bonus,d0				; set bonus ding sound
 		jsr	(QueueSound2).l				; play it
 
 		moveq	#0,d0					; clear d0 for word-based addressing
 		move.b	obSubtype(a0),d0			; get subtype of object (must not be 0)
-		add.w	d0,d0					; double for word-based idnexing
+		add.w	d0,d0					; double for word-based indexing
 		move.w	Bonus_Points(pc,d0.w),d0		; load bonus points from array
 		jsr	(AddPoints).l				; add that value to score
 ; ---------------------------------------------------------------------------
@@ -85,7 +85,7 @@ Bonus_Display:	; Routine 2
 		out_of_range.s	.delete				; has objet gone offscreen? if yes, delete
 		jmp	(DisplaySprite).l			; keep displaying object
 
-	.delete:	
+	.delete:
 		jmp	(DeleteObject).l			; delete object
 ; ===========================================================================
 

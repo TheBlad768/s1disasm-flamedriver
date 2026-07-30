@@ -29,4 +29,3 @@ sound/dac/dpcm/generated/hashes.lua
 sound/dac/pcm/generated/*.inc
 sound/dac/pcm/generated/*.pcm
 sound/dac/pcm/generated/hashes.lua
-build_tools/chkbitperfect.lua

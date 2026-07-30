@@ -22,7 +22,7 @@ lblk_touchtype:	equ objoff_3F		; stores Sonic's touch response from SolidObject 
 
 LBlk_Var:	; width, height
 		dc.b 32/2, 32/2		; block that sinks when stood on
-		dc.b 64/2, 24/2		; platform that rises when stood on 
+		dc.b 64/2, 24/2		; platform that rises when stood on
 		dc.b 32/2, 32/2		; cork block that floats on water
 		dc.b 32/2, 32/2		; generic solid block
 ; ===========================================================================
@@ -76,7 +76,7 @@ LBlk_Action:	; Routine 2
 		addq.w	#1,d3					; +1px for stood-on check
 		bsr.w	SolidObject				; make platform solid for Sonic
 		move.b	d4,lblk_touchtype(a0)			; store collision response value (0, +1, -1)
-		bsr.w	LBlk_Nudge				; nudge platform as Sonic stannds on it
+		bsr.w	LBlk_Nudge				; nudge platform as Sonic stands on it
 
 	.chkdel:
 		out_of_range.w	DeleteObject,lblk_origX(a0)	; has block gone out of range? if yes, delete it

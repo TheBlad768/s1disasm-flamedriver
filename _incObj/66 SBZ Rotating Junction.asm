@@ -14,18 +14,18 @@ Jun_Index:	dc.w Jun_Main-Jun_Index
 		dc.w Jun_Display-Jun_Index
 		dc.w Jun_Inside-Jun_Index
 
+jun_unused:	equ objoff_30		; (set to 60, but unused)
+jun_grabframe:	equ objoff_32		; frame ID that triggered Sonic getting grabbed by junction
 jun_direction:	equ objoff_34		; current rotation direction (1 = clockwise, -1 = counterclockwise)
 jun_switchdown:	equ objoff_36		; flag set while reversal switch is pressed down by Sonic
 jun_switchid:	equ objoff_38		; which switch ID will reverse the disc
-jun_unused:	equ objoff_30		; (set to 60, but unused)
-jun_grabframe:	equ objoff_32		; frame ID that triggered Sonic getting grabbed by junction
 ; ===========================================================================
 
 Jun_Main:	; Routine 0
 		addq.b	#2,obRoutine(a0)			; advance to Jun_Action
 		move.w	#2-1,d1					; create two objects
 		movea.l	a0,a1					; write first object to current RAM location
-		bra.s	.makeitem				; keep first obejct at obRoutine 2
+		bra.s	.makeitem				; keep first object at obRoutine 2
 ; ---------------------------------------------------------------------------
 
 	.loop:
@@ -188,7 +188,7 @@ Jun_ChgPos:
 		add.w	obY(a0),d0				; add junction's base Y-position
 		move.w	d0,obY(a1)				; update Sonic's Y-position
 		rts						; return
-; End of functioon Jun_ChgPos
+; End of function Jun_ChgPos
 
 ; ---------------------------------------------------------------------------
 

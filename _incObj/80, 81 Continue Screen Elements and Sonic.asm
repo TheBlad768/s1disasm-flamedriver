@@ -29,8 +29,8 @@ CSI_Main:	; Routine 0
 
 CSI_Display:	; Routine 2
 		jmp	(DisplaySprite).l			; display element
-
 ; ===========================================================================
+
 ; --- X-positions for Mini-Sonics ---
 ; These values are pseudo-interlaced instead of going left-to-right,
 ; keeping consecutively collected continues overall centered (roughly).
@@ -161,7 +161,7 @@ CSon_ShowFall:
 ; ===========================================================================
 
 CSon_Animate:	; Routine 4
-		tst.b	(v_jpadpress1).w			; has Start button beenpressed?
+		tst.b	(v_jpadpress1).w			; has Start button been pressed?
 		bmi.s	.continueUsed				; if yes, continue has been used
 
 		lea	(Ani_CSon).l,a1				; load continue screen Sonic animation script

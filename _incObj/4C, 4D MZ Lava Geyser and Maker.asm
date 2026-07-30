@@ -23,8 +23,8 @@ GMake_Index:	dc.w GMake_Main-GMake_Index		; 0
 		dc.w GMake_Display-GMake_Index		; 8
 		dc.w GMake_Delete-GMake_Index		; A
 
-gmake_time:	equ objoff_34		; time delay (2 bytes)
 gmake_timer:	equ objoff_32		; current time remaining (2 bytes)
+gmake_time:	equ objoff_34		; time delay (2 bytes)
 gmake_parent:	equ objoff_3C		; address of parent object
 ; ===========================================================================
 
@@ -273,7 +273,7 @@ Geyser_Type00:
 Geyser_Type01:
 		addi.w	#$18,obVelY(a0)				; increase object's falling speed
 		move.w	geyser_origY(a0),d0			; get original Y-position
-		cmp.w	obY(a0),d0				; has object falen below original position?
+		cmp.w	obY(a0),d0				; has object fallen below original position?
 		bhs.s	.return					; if not, branch
 
 		addq.b	#4,obRoutine(a0)			; advance to Geyser_Delete

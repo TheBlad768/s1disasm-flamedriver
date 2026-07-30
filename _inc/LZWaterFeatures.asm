@@ -118,7 +118,7 @@ DynWater_LZ1_Routine0:
 
 		cmpi.w	#$1080,d0				; has the screen passed the very bottom tunnel door?
 		blo.s	.setWaterTarget				; if not, branch
-		move.b	#$80,(f_switch+5).w			; otherwise, set bit 7 in switch 5 (forces the door to close after)
+		move.b	#$80,(f_switch+5).w			; otherwise, set bit 7 in switch 5 (forces the door to close after, see FBlock_LZSmallDoor_Close)
 		move.w	#$5C8,d1				; lower the water to the very bottom for a shallow tunnel
 
 		cmpi.w	#$1380,d0				; has the screen reached the red spring for the vertical shaft?
@@ -180,7 +180,7 @@ DynWater_LZ2:
 
 		cmpi.w	#$B00,d0				; has the screen reached the area just before the "double conveyor belts room"?
 		blo.s	.setWaterTarget				; if not, branch
-		move.w	#$428,d1				; lower the water more for the "double conveyore belts room", and the end of level signpost
+		move.w	#$428,d1				; lower the water more for the "double conveyor belts room", and the end of level signpost
 
 	.setWaterTarget:
 		move.w	d1,(v_waterpos3).w			; set target water height
@@ -283,12 +283,12 @@ DynWater_LZ3_Routine3:
 		blo.s	.setWaterTarget				; if not, branch
 		move.w	#$900,d1				; force water to below $800 (this causes the water not to appear at all)
 
-		cmpi.w	#$1BC0,d0				; has the screen reached the area with a sheild?
+		cmpi.w	#$1BC0,d0				; has the screen reached the area with a shield?
 		blo.s	.setWaterTarget				; if not, branch
 		move.b	#4,(v_wtr_routine).w			; set to DynWater_LZ3_Routine4 (boss area)
 		move.w	#$608,(v_waterpos3).w			; set water target
 		move.w	#$7C0,(v_waterpos2).w			; force water height to start at (to speed up rising)
-		move.b	#1,(f_switch+8).w			; set switch 8 (opens a hidden door/wall; a switch was probably removed during developement)
+		move.b	#1,(f_switch+8).w			; set switch 8 (opens a hidden door/wall; a switch was probably removed during development)
 		rts						; return
 ; ---------------------------------------------------------------------------
 
@@ -387,7 +387,7 @@ LZWindTunnels:
 		move.b	#1,(f_wtunnelmode).w			; set flag that Sonic is in a wind tunnel
 
 	if FixBugs
-		; d0 was overwritten earlier but here it's used as if it wasn't!		
+		; d0 was overwritten earlier but here it's used as if it wasn't!
 		; Luckily, the upper byte of Sonic's X-position remains mostly in d0,
 		; so the routine luckily still mostly works out of sheer, dumb luck.
 		move.w	obX(a1),d0				; get Sonic's current X-position again
@@ -500,7 +500,7 @@ LZSlide_Move:
 		; This is some unused, unknown leftover from a deleted extra feature.
 		; Judging by the design of chunks 2/7/3, which aren't that steep,
 		; this may have been to slow down Sonic on those or something.
-		cmpi.w	#3,d1					; is this one of the first three chunsk in Slide_Chunks? (IDs 2/7/3)
+		cmpi.w	#3,d1					; is this one of the first three chunks in Slide_Chunks? (IDs 2/7/3)
 		bhs.s	.setSpeedAndDirection			; if not, branch
 		nop						; useless nop
 
@@ -527,7 +527,7 @@ LZSlide_Move:
 ; End of function LZWaterSlides
 ; ===========================================================================
 
-Slide_Speeds:	; These speeds are mulitplied by $100!
+Slide_Speeds:	; These speeds are multiplied by $100!
 		dc.b $A, -$B, $A, -$A, -$B, -$C, $B
 		even
 
