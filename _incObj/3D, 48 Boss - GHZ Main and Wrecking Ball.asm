@@ -17,7 +17,9 @@ BGHZ_ParentObj equ objoff_34					; Pointer to main boss controller
 BGHZ_SineCounter equ objoff_3F 					; sine counter for bobbing motion
 BGHZ_BossGenericTimer equ objoff_3C 				; timer for how many frames to do an action, whether its wait for explosions, or to move in a direction
 GBall_AnchorPos equ objoff_32					; offset used to calculate position of chain anchor on Eggman's ship
-GBall_PosX equ objoff_3A	
+GBall_LinkDist equ objoff_3C					; offset to see if the chain links have extended far enough
+
+; swing_origX ($3A) and swing_origY ($38) are defined in 15 Swinging Platforms.asm, used to calculate the swing of the ball.				
 
 BGHZ_ObjData:	
 		dc.b 2,	0					; routine counter, animation
@@ -495,15 +497,15 @@ GBall_Base:	; Routine 2
 		addi.l	#v_objspace&$FFFFFF,d4			; convert into a full 24 bit address
 		movea.l	d4,a1					; copy full address
 		move.b	(a3)+,d0				; copy position data and increment address (used as a target position)
-		cmp.b	BGHZ_BossGenericTimer(a1),d0		; has the object's current value reached the target?
+		cmp.b	GBall_LinkDist(a1),d0			; has the object's current value reached the target?
 		beq.s	.skip					; if yes, branch
-		addq.b	#1,BGHZ_BossGenericTimer(a1)		; no, increment by 1 (keep extending)
+		addq.b	#1,GBall_LinkDist(a1)			; no, increment by 1 (keep extending)
 
 ; loc_17BE0:
 .skip:
 		dbf	d6,.convertIndex			; decrement and branch
 
-		cmp.b	BGHZ_BossGenericTimer(a1),d0		; has the final object reached the target?
+		cmp.b	GBall_LinkDist(a1),d0			; has the final object reached the target?
 		bne.s	.checkAnchor				; if not, branch
 		movea.l	BGHZ_ParentObj(a0),a1			; copy address of parent
 		cmpi.b	#6,ob2ndRout(a1)			; has the ship started moving?
@@ -542,10 +544,12 @@ GBall_UpdateBase:
 		bchg	#0,obFrame(a0)				; change frame every 8th frame
 
 .no_chg:
-		move.w	obX(a1),GBall_PosX(a0)			; get position from parent (ship)
+
+; swing_origX / swing_origY are defined in 15 Swinging Platforms.asm (same offset used here), the ball controller stores in a0 and then goes back to GBall_Display and Swing_Move2 uses these a0 values.
+		move.w	obX(a1),swing_origX(a0)			; get position from parent (ship)
 		move.w	obY(a1),d0
 		add.w	GBall_AnchorPos(a0),d0			; copy anchor position offset into d0
-		move.w	d0,obBossY(a0)				; move anchor to ship's Y plus offset
+		move.w	d0,swing_origY(a0)			; move anchor to ship's Y plus offset
 		move.b	obStatus(a1),obStatus(a0)		; copy object status
 		tst.b	obStatus(a1)				; has boss been beaten?
 		bpl.s	.not_beaten				; if not, branch
