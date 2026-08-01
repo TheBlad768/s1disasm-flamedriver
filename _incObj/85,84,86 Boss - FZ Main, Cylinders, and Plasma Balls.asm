@@ -22,13 +22,14 @@ BossFinal_Index:
 		dc.w BossFinal_EmptyShip-BossFinal_Index
 		dc.w BossFinal_Flame-BossFinal_Index
 
+BossFinal_ChildCmd:		equ objoff_29			; offset used to send command to child objects, treated as a one-shot (cleared right after command is sent)
+BossFinal_AttackState:		equ objoff_30			; offset used to store attack states so other sub-objects can see status
+BossFinal_EscapeTimer:		equ objoff_30			; offset used to play the hit sound, wait, and then start exploding as Eggman is fleeing
+BossFinal_ChildCounter:		equ objoff_32			; offset used to keep track of how many objects tied to the fight are still executing (for phase control). on the plasma launcher, -1 signifies the plasma phase is over
 BossFinal_ParentObj:		equ objoff_34			; pointer to main boss controller, also used for incrementing object routine to save RAM
+BossFinal_HitFlash:		equ objoff_35			; offset used to keep track of flashing frames (cylinder pointer overwrites the normally used offset of obBossFlash which is objoff_3E)
 BossFinal_PlasmaPtr:		equ objoff_36			; pointer to plasma ball object
-BossFinal_CylinderPtr:		equ objoff_38			; pointer to the start of the Cylinder address table, each entry is 2 bytes, so an 8 byte table ending at off_3F
-BossFinal_CylinderState:	equ objoff_30			; offset used to store what cylinder Eggman is hiding in (a1), also used as a general attack flag, a0 gets the cylinder index where he will hide in which also is interpreted as "attacking"
-BossFinal_ChildCmd:		equ objoff_29			; offset used to store attack states and flags
-BossFinal_HitFlash:		equ objoff_35			; offset used to keep track of flashing frames (cylinder pointer overwrites the normally used offset)
-BossFinal_ChildCounter:		equ objoff_32			; offset used to keep track of how many objects tied to the fight are still executing (for phase control)
+BossFinal_CylinderPtr:		equ objoff_38			; pointer to the start of the Cylinder address table, each entry is 2 bytes, so an 8 byte table ending at objoff_3F
 ; ===========================================================================
 
 BossFinal_ObjData:
@@ -131,7 +132,7 @@ BossFinal_Skip:
 .finalSetup:
 		move.w	#0,BossFinal_ParentObj(a0)		; set pointer to itself to 0 for later use
 		move.b	#8,obBossHits(a0) 			; set number of hits to 8
-		move.w	#-1,BossFinal_CylinderState(a0)		; set initial attack flag to -1
+		move.w	#-1,BossFinal_AttackState(a0)		; set initial attack flag to -1
 
 BossFinal_Eggman:	; Routine 2
 		moveq	#0,d0
@@ -167,9 +168,9 @@ BossFinal_Eggman_Wait:
 
 ; loc_19EA8:
 BossFinal_Eggman_Crush:
-		tst.w	BossFinal_CylinderState(a0)		; has a cylinder pair to move already been picked? (see .loadSelectedPair)
+		tst.w	BossFinal_AttackState(a0)		; has a cylinder pair to move already been picked? (see .loadSelectedPair)
 		bpl.s	.checkPosition				; if yes, branch
-		clr.w	BossFinal_CylinderState(a0)		; clear
+		clr.w	BossFinal_AttackState(a0)		; clear
 		jsr	(RandomNumber).l			; generate a random number and return
 		andi.w	#$C,d0					; AND to keep the upper two bits of the lower word (this means it will be $0 $4 $8 or $C which is the starting entry of a pair in the cylinder table)
 		move.w	d0,d1					; copy and add
@@ -183,7 +184,7 @@ BossFinal_Eggman_Crush:
 		lea	BossFinal_CylinderPairs(pc),a1		; load data for cylinder pairs to move (which was calculated above)
 		move.w	(a1,d0.w),d0				; load first cylinder in pair
 		move.w	(a1,d1.w),d1				; load second cylinder in pair
-		move.w	d0,BossFinal_CylinderState(a0)		; set cylinder in which Eggman is hiding in (not actual object address yet) contains either 0 2 4 6
+		move.w	d0,BossFinal_AttackState(a0)		; set cylinder in which Eggman is hiding in (not actual object address yet) contains either 0 2 4 6
 		moveq	#-1,d2					; set up for full address calculation ($FFFFFFFF)
 		move.w	BossFinal_CylinderPtr(a0,d0.w),d2	; calculate cylinder object #1 address
 		movea.l	d2,a1					; copy calculated address
@@ -194,11 +195,11 @@ BossFinal_Eggman_Crush:
 ; SolidObject, its hitbox is sitting at the Eggman cylinder. This is slightly backwards from other bosses, the cylinder objects write INTO the controller
 ; which is why nothing is different between the dummy cylinder, only the occupied cylinder writes up (this is why we are setting things up into a1 and NOT the controller a0)
 		move.b	#-1,BossFinal_ChildCmd(a1)		; set command to move
-		move.w	#-1,BossFinal_CylinderState(a1)		; mark this cylinder as containing Eggman
+		move.w	#-1,EggmanCylinder_HasEggman(a1)	; mark this cylinder as containing Eggman
 		move.w	BossFinal_CylinderPtr(a0,d1.w),d2	; calculate cylinder object #2 address
 		movea.l	d2,a1					; copy calculated address
 		move.b	#1,BossFinal_ChildCmd(a1) 		; set command to move
-		move.w	#0,BossFinal_CylinderState(a1)		; mark this cylinder as empty
+		move.w	#0,EggmanCylinder_HasEggman(a1)		; mark this cylinder as empty
 		move.w	#1,BossFinal_ChildCounter(a0)		; set cylinder object counter (to keep track of fight phase)
 		clr.b	BossFinal_HitFlash(a0)			; clear damage flashing timer
 		move.w	#sfx_Rumbling,d0
@@ -282,7 +283,7 @@ BossFinal_Eggman_Crush:
 		tst.b	obBossHits(a0)				; has the boss been defeated?
 		beq.s	.defeated				; if so, branch
 		addq.b	#2,BossFinal_ParentObj(a0)		; increment object routine
-		move.w	#-1,BossFinal_CylinderState(a0) 	; reset cylinder state
+		move.w	#-1,BossFinal_AttackState(a0) 		; reset attack state
 		clr.w	BossFinal_ChildCounter(a0)		; clear counter
 		rts
 ; ===========================================================================
@@ -316,10 +317,10 @@ BossFinal_Eggman_Plasma:
 		moveq	#-1,d0					; set up to calculate full address
 		move.w	BossFinal_PlasmaPtr(a0),d0		; load table full of lower word pointers
 		movea.l	d0,a1					; calculate full address
-		tst.w	BossFinal_CylinderState(a0)		; is the plasma currently active (same offset, now re-used for plasma status)
+		tst.w	BossFinal_AttackState(a0)		; is the plasma currently active?
 		bpl.s	.soundWait				; if yes, branch
-		clr.w	BossFinal_CylinderState(a0)		; clear state
-		move.b	#-1,BossFinal_ChildCmd(a1)		; set state to currently attacking
+		clr.w	BossFinal_AttackState(a0)		; clear state
+		move.b	#-1,BossFinal_ChildCmd(a1)		; tell the launcher to fire plasma
 		bsr.s	.playSound
 
 ; loc_1A000:
@@ -332,12 +333,12 @@ BossFinal_Eggman_Plasma:
 ; loc_1A00A:
 .checkPlasma:
 		tst.w	BossFinal_ChildCounter(a0)		; are objects still being executed? (plasma uses 0 as an active flag)
-		beq.s	.exit					; yes, plasma is still there, branch
+		beq.s	.exit					; if yes, plasma is still there, branch
 		subq.b	#2,BossFinal_ParentObj(a0)		; go back a routine
-		move.w	#-1,BossFinal_CylinderState(a0) 	; set state to idle
+		move.w	#-1,BossFinal_AttackState(a0) 		; set state to idle
 		clr.w	BossFinal_ChildCounter(a0)		; clear
 
-; .checkPlasma:
+; .locret_1A01E:
 .exit:
 		rts
 ; ===========================================================================
@@ -506,17 +507,17 @@ BossFinal_Eggman_Ship:
 BossFinal_Eggman_Escape:
 		bset	#0,obStatus(a0)				; face to the right
 		jsr	(SpeedToPos).l
-		tst.w	BossFinal_CylinderState(a0)		; has the invincibility timer expired?
+		tst.w	BossFinal_EscapeTimer(a0)		; has the invincibility timer expired?
 		bne.s	.shipHover				; if not, branch
 		tst.b	obColType(a0)				; is Eggman's collision enabled?
 		bne.s	.watchEggman				; yes, branch
-		move.w	#30,BossFinal_CylinderState(a0) 	; set a timer for 30 frames (another repurposed offset)
+		move.w	#30,BossFinal_EscapeTimer(a0) 		; set a timer for 30 frames
 		move.w	#sfx_HitBoss,d0
 		jsr	(QueueSound2).l				; play boss damage sound
 
 ; loc_1A1FC:
 .shipHover:
-		subq.w	#1,BossFinal_CylinderState(a0)		; decrement timer
+		subq.w	#1,BossFinal_EscapeTimer(a0)		; decrement timer
 		bne.s	.watchEggman				; if timer is above 0, branch
 		tst.b	obStatus(a0)				; has Eggman been defeated?
 		bpl.s	.setCollision				; if not, branch
@@ -528,7 +529,7 @@ BossFinal_Eggman_Escape:
 		; This allows for the hit sound to start playing every 30 seconds again audibly, since now collision has been disabled
 		; and every time we fall through the above checks, we reset the timer and let it decrement, and there are no explosions to
 		; override the hit sound. The timer can be forced to always be -1 which will only cause it to decrement from 30 to 0 one time.
-		move.w	#-1,BossFinal_CylinderState(a0) ; disable timer
+		move.w	#-1,BossFinal_EscapeTimer(a0) 		; disable timer
 	endif
 		bra.s	.watchEggman
 ; ===========================================================================
@@ -744,6 +745,8 @@ EggmanCylinder_Index:
 		dc.w EggmanCylinder_Action-EggmanCylinder_Index
 		dc.w EggmanCylinder_Move-EggmanCylinder_Index
 
+EggmanCylinder_HasEggman:	equ objoff_30			; offset used to denote which cylinder in the attacking pair Eggman is hiding in (-1 = Eggman present, 0 = decoy cylinder)
+EggmanCylinder_BaseY:		equ objoff_38			; offset used for the base Y position as a fixed-point value
 EggmanCylinder_Displacement:	equ objoff_3C			; offset used for a vertical displacement for the cylinder
 EggmanCylinder_FracDisplace:	equ objoff_3E			; offset that gets written to when doing vertical displacement, ends up being sub pixel values
 ; ===========================================================================
@@ -755,7 +758,7 @@ EggmanCylinder_PosData:
 		dc.w boss_fz_x+$C0,  boss_fz_y-$50
 ; ===========================================================================
 
-EggmanCylinder_Main:	; Routine
+EggmanCylinder_Main:	; Routine 0
 		lea	EggmanCylinder_PosData(pc),a1		; load cylinder position data table
 		moveq	#0,d0
 		move.b	obSubtype(a0),d0			; load cylinder number (set when boss was loaded)
@@ -768,7 +771,7 @@ EggmanCylinder_Main:	; Routine
 		move.l	#Map_EggCyl,obMap(a0)
 		move.w	(a1)+,obX(a0)				; copy position and increment
 		move.w	(a1),obY(a0)				; copy Y and don't increment yet
-		move.w	(a1)+,BossFinal_CylinderPtr(a0)		; store same Y as a base position and increment
+		move.w	(a1)+,EggmanCylinder_BaseY(a0)		; store same Y as a base position and increment
 	if FixBugs=0
 		; These are likely the result of the developers fumbling obWidth and
 		; obActWidth, which wasn't completely fixed until REV01.
@@ -796,14 +799,14 @@ EggmanCylinder_Action: ; Routine 2
 ; loc_1A4EA:
 EggmanCylinder_UpdatePos:
 		move.l	EggmanCylinder_Displacement(a0),d0	; copy how far we have traveled
-		move.l	BossFinal_CylinderPtr(a0),d1		; copy base position
+		move.l	EggmanCylinder_BaseY(a0),d1		; copy base position
 		add.l	d0,d1					; current position
 		swap	d1					; swap so that base pixels are in lower word
 		move.w	d1,obY(a0)				; set base pixels to object Y
 		cmpi.b	#4,obRoutine(a0)			; are we ready to go to the move routine?
 		bne.s	.calcFloorFrame				; if not, branch
-		tst.w	BossFinal_CylinderState(a0)		; is this cylinder the one holding Eggman?
-		bpl.s	.calcFloorFrame				; if not, branch
+		tst.w	EggmanCylinder_HasEggman(a0)		; is this cylinder the one holding Eggman? -1 yes, 0 is decoy
+		bpl.s	.calcFloorFrame				; if not (0), branch
 		moveq	#-$A,d0					; floor cylinder, move 10 pixels up from origin
 		cmpi.b	#2,obSubtype(a0)			; is it a floor cylinder?
 		ble.s	.setPosition				; if yes (0 or 2) branch
@@ -882,7 +885,7 @@ EggmanCylinder_Bottom:
 		tst.b	obBossHits(a1)				; are there any hits left?
 		bne.s	.retract				; if yes, branch
 		bsr.w	BossDefeated
-		subi.l	#$10000,EggmanCylinder_Displacement(a0)	; retract cylinder at half speed (20000 - 10000)
+		subi.l	#$10000,EggmanCylinder_Displacement(a0)	; retract cylinder at half speed (from 2px to 1px speed)
 
 ; loc_1A5B4:
 .retract:
@@ -891,7 +894,7 @@ EggmanCylinder_Bottom:
 		clr.l	EggmanCylinder_Displacement(a0)		; clear displacement and go right back to 0
 		movea.l	BossFinal_ParentObj(a0),a1		; copy Eggman's address
 		subq.w	#1,BossFinal_ChildCounter(a1)		; tell Eggman an object is done executing
-		clr.w	BossFinal_CylinderState(a1)		; clear Eggman's cylinder status (hiding or not hiding in it)
+		clr.w	BossFinal_AttackState(a1)		; clear attack state so that new cylinder pair can eventually be picked again
 		subq.b	#2,obRoutine(a0)			; go back to the Action routine
 		rts
 ; ===========================================================================
@@ -925,7 +928,7 @@ EggmanCylinder_Top:
 		tst.b	obBossHits(a1)				; are there any hits left?
 		bne.s	.retract				; if yes, branch
 		bsr.w	BossDefeated
-		addi.l	#$10000,EggmanCylinder_Displacement(a0)	; retract cylinder at half speed (20000 - 10000)
+		addi.l	#$10000,EggmanCylinder_Displacement(a0)	; retract cylinder at half speed (from 2px to 1px speed)
 
 ; loc_1A626:
 .retract:
@@ -934,7 +937,7 @@ EggmanCylinder_Top:
 		clr.l	EggmanCylinder_Displacement(a0) 	; clear displacement and go right back to 0
 		movea.l	BossFinal_ParentObj(a0),a1		; copy Eggman's address
 		subq.w	#1,BossFinal_ChildCounter(a1)		; tell Eggman an object is done executing
-		clr.w	BossFinal_CylinderState(a1)		; clear Eggman's cylinder status (hiding or not hiding in it)
+		clr.w	BossFinal_AttackState(a1)		; clear attack state so that new cylinder pair can eventually be picked again
 		subq.b	#2,obRoutine(a0)			; go back to the Action routine
 		rts
 ; ===========================================================================
@@ -979,6 +982,9 @@ BossPlasma_Index:
 		dc.w BossPlasma_MakeBalls-BossPlasma_Index
 		dc.w BossPlasma_Finish-BossPlasma_Index
 		dc.w BossPlasma_Balls-BossPlasma_Index
+
+BossPlasma_TargetX:		equ objoff_30			; offset used to keep track of the target X position in each ball phase, re-used once to set up X spread offsets when first spawning
+BossPlasma_BallsAlive:		equ objoff_38			; offset used to keep track of how many plasma balls are still alive
 ; ===========================================================================
 
 BossPlasma_Main:	; Routine 0
@@ -1040,11 +1046,11 @@ BossPlasma_MakeBalls:; Routine 4
 		clr.b	BossFinal_ChildCmd(a0)			; clear flag so it only runs once
 
 ; Seemingly dead code here as a2 is never used anywhere, possibly an old table lookup?
-		add.w	BossFinal_CylinderState(a0),d0
+		add.w	BossPlasma_TargetX(a0),d0
 		andi.w	#$1E,d0
 		adda.w	d0,a2
 
-		addq.w	#4,BossFinal_CylinderState(a0)		; increment spread offset
+		addq.w	#4,BossPlasma_TargetX(a0)		; increment spread offset (to spread the ball out horizontally when spawning)
 		clr.w	BossFinal_ChildCounter(a0)		; clear ball counter
 		moveq	#3,d2					; set to loop 4 times
 
@@ -1078,9 +1084,9 @@ BossPlasma_MakeBalls:; Routine 4
 		andi.w	#$1F,d0					; AND to keep 5 bits of the random number (0-31)
 		subi.w	#$10,d0					; subtract by 16 to center it
 		add.w	d1,d0					; set ball offset
-		move.w	d0,BossFinal_CylinderState(a1)		; store the ball's target X (offset reused)
+		move.w	d0,BossPlasma_TargetX(a1)		; store the ball's target X
 		addq.w	#1,BossFinal_ChildCounter(a0)		; count this ball
-		move.w	BossFinal_ChildCounter(a0),BossFinal_CylinderPtr(a0) ; copy counter
+		move.w	BossFinal_ChildCounter(a0),BossPlasma_BallsAlive(a0) ; copy counter
 		dbf	d2,.loop				; repeat sequence 3 more times
 
 ; loc_1A954:
@@ -1097,7 +1103,7 @@ BossPlasma_MakeBalls:; Routine 4
 ; loc_1A962:
 BossPlasma_Finish: ; Routine 6
 		move.b	#2,obAnim(a0)				; set animation type for launcher
-		tst.w	BossFinal_CylinderPtr(a0)		; are there any balls still alive?
+		tst.w	BossPlasma_BallsAlive(a0)		; are there any balls still alive?
 		bne.s	.exit					; if yes, exit
 		move.b	#2,obRoutine(a0)			; set routine to Generator
 		movea.l	BossFinal_ParentObj(a0),a1		; copy Eggman's address
@@ -1126,7 +1132,7 @@ BossPlasma_Index2:
 
 ; loc_1A9A6:
 BossPlasma_Spread:
-		move.w	BossFinal_CylinderState(a0),d0		; copy target X (reused offset)
+		move.w	BossPlasma_TargetX(a0),d0		; copy target X
 		sub.w	obX(a0),d0				; subtract distance from generator to target
 		asl.w	#4,d0					; multiply by 16
 		move.w	d0,obVelX(a0)				; set that as velocity
@@ -1141,7 +1147,7 @@ BossPlasma_Drop:
 		beq.s	.aim					; if not, branch
 		jsr	(SpeedToPos).l				; calculate movement
 		move.w	obX(a0),d0				; copy current X
-		sub.w	BossFinal_CylinderState(a0),d0		; subtract current X from target X
+		sub.w	BossPlasma_TargetX(a0),d0		; subtract current X from target X
 		bcc.s	.aim					; have we reached the target starting X? if not, branch (moving from right to left so if there is no carry, then too far left)
 		clr.w	obVelX(a0)				; target reached, stop
 	if FixBugs
@@ -1178,7 +1184,7 @@ BossPlasma_Drop:
 BossPlasma_Move:
 		jsr	(SpeedToPos).l
 		cmpi.w	#boss_fz_y+$D0,obY(a0)			; have we reached the bottom of the screen?
-		bhs.s	.deleteChild				; if not, branch
+		bhs.s	.deleteChild				; if yes, branch
 		subq.w	#1,obSubtype(a0)			; decrement timer
 		beq.s	.deleteChild				; has timer hit 0? if so, branch
 		rts
@@ -1187,7 +1193,7 @@ BossPlasma_Move:
 ; loc_1AA34:
 .deleteChild:
 		movea.l	BossFinal_ParentObj(a0),a1		; copy ball launcher's address
-		subq.w	#1,BossFinal_CylinderPtr(a1)		; decrement ball count
+		subq.w	#1,BossPlasma_BallsAlive(a1)		; decrement ball count
 	if FixBugs
 		; Avoid returning to BossPlasma_Balls to prevent a display-and-delete bug.
 		addq.l	#4,sp

@@ -19,6 +19,7 @@ BossMarble_Index:
 BossFire_GenericTimer:	equ objoff_29				; timer used for fireball that is spawned by Eggman, as well as used for a counter
 BossFire_SpreadX:	equ objoff_32				; scratch RAM used to save X of where the first fireball hit
 BossMarble_ParentObj:	equ objoff_34 				; Pointer to main boss controller
+BossMarble_LavaTimer:	equ objoff_34				; countdown for lava spawn timer
 BossMarble_GenericTimer:equ objoff_3C				; timer for how many frames to do an action, whether its wait for explosions, or to move in a direction
 BossMarble_SineCounter:	equ objoff_3F				; sine counter for bobbing motion
 ; ===========================================================================
@@ -109,7 +110,7 @@ BMZ_ShipStart:
 ; loc_18334
 .continue:
 		jsr	(RandomNumber).l			; roll a random number
-		move.b	d0,BossMarble_ParentObj(a0)		; use same object offset as pointer reference (except for a0) to store number
+		move.b	d0,BossMarble_LavaTimer(a0)		; store it
 
 ; loc_1833E
 BMZ_ShipUpdate:
@@ -204,7 +205,7 @@ BMZ_ChgDir:
 		subq.w	#4,obVelY(a0)				; subtract y velocity to make his swoop do a U shape
 
 BossMarble_MakeLava:
-		subq.b	#1,BossMarble_ParentObj(a0)		; subtract 1 from the random number storage
+		subq.b	#1,BossMarble_LavaTimer(a0)		; subtract 1 from the random number storage
 		bcc.s	.checkRight				; has the frame countdown spawn timer expired? if not, branch
 		jsr	(FindFreeObj).l				; timer has expired, find a free object slot
 		bne.s	.generateTimer				; no free objects, leave early
@@ -221,7 +222,7 @@ BossMarble_MakeLava:
 ; This line may trick you at first sight, but it actually serves two purposes. It is important to note that
 ; this instruction is a move.w with an immediate size of a byte. This means that the immediate actually gets zero-extended
 ; to $00FF. Object offsets in Sonic 1 are a single byte in size. The 68000 is also big endian, meaning the high byte gets written first.
-; 00 gets written to objoff_28 (obSubtype) and FF gets written to BossFire_GenericTimer which is used for a single check to adjust render priority in 14 Lava Ball.asm
+; 00 gets written to objoff_28 (obSubtype) and FF gets written to objoff_29 which is used for a single check to adjust render priority in 14 Lava Ball.asm
 ; So, this is NOT setting the subtype to FF, rather it is writing two bytes used for the lava flame in one instruction to save some time.
 		move.w	#$FF,obSubtype(a1)
 
@@ -231,7 +232,7 @@ BossMarble_MakeLava:
 		jsr	(RandomNumber).l			; use d1 as a pseudo-random seeder for d0
 		andi.b	#$1F,d0					; mask to $1F
 		addi.b	#$40,d0					; add $40, forcing range to be $40-$5F
-		move.b	d0,BossMarble_ParentObj(a0)		; store new countdown timer
+		move.b	d0,BossMarble_LavaTimer(a0)		; store new countdown timer
 
 ; loc_1845C
 .checkRight:

@@ -235,7 +235,12 @@ DLE_LZ3:
 	.skip_layout:
 		tst.b	(v_dle_routine).w
 		bne.s	.skip_boss				; branch if boss is already loaded
+	if FixBugs
+	; Easy fix to load the boss quicker to prevent Eggman's graphics still decompressing briefly while on screen
+		cmpi.w	#boss_lz_x-$1C0,(v_screenposx).w
+	else
 		cmpi.w	#boss_lz_x-$140,(v_screenposx).w
+	endif
 		blo.s	.skip_boss2				; branch if camera is left of $1CA0
 		cmpi.w	#boss_lz_y+$540,(v_screenposy).w
 		bhs.s	.skip_boss2				; branch if camera is below $600
