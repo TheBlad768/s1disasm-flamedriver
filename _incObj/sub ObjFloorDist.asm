@@ -15,7 +15,7 @@
 ; ---------------------------------------------------------------------------
 
 ObjFloorDist:
-		move.w	obX(a0),d3			; get object's X-position
+		move.w	obX(a0),d3				; get object's X-position
 ; ---------------------------------------------------------------------------
 
 ObjFloorDist2:	; X-position is already in d3
@@ -47,6 +47,6 @@ ObjFloorDist2:	; X-position is already in d3
 		move.b	#0,d3				; snap to flat floor
 
 	.return:
-		rts					; return
+		rts						; return
 
 ; End of function ObjFloorDist

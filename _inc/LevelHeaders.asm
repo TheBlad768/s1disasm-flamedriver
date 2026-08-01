@@ -1,5 +1,8 @@
+; ===========================================================================
 ; ---------------------------------------------------------------------------
 ; Level Headers
+; ---------------------------------------------------------------------------
+; * denotes unused data (these are loaded elsewhere)
 ; ---------------------------------------------------------------------------
 
 lhead:	macro plc1,lvlgfx,plc2,sixteen,twofivesix,music,pal
@@ -9,8 +12,7 @@ lhead:	macro plc1,lvlgfx,plc2,sixteen,twofivesix,music,pal
 	dc.b 0, music, pal, pal	; 0*, music*, palette*, palette (used)
 	endm
 
-; 1st PLC, level gfx (unused), 2nd PLC, 16x16 data, 128x128 data,
-; * denotes unused data (these are loaded elsewhere)
+; ---------------------------------------------------------------------------
 
 LevelHeaders:	;	1st PLC		level gfx*	2nd PLC		16x16 data	128x128 data	music*		palette
 		lhead	plcid_GHZ,	Nem_GHZ_2nd,	plcid_GHZ2,	Blk16_GHZ,	Blk128_GHZ,	bgm_GHZ,	palid_GHZ	; Green Hill
