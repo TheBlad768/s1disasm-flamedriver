@@ -22,14 +22,14 @@ BossFinal_Index:
 		dc.w BossFinal_EmptyShip-BossFinal_Index
 		dc.w BossFinal_Flame-BossFinal_Index
 
+BossFinal_ChildCmd:		equ objoff_29			; offset used to send command to child objects, treated as a one-shot (cleared right after command is sent)
+BossFinal_AttackState:		equ objoff_30			; offset used to store attack states so other sub-objects can see status
+BossFinal_EscapeTimer:		equ objoff_30			; offset used to play the hit sound, wait, and then start exploding as Eggman is fleeing
+BossFinal_ChildCounter:		equ objoff_32			; offset used to keep track of how many objects tied to the fight are still executing (for phase control). on the plasma launcher, -1 signifies the plasma phase is over
 BossFinal_ParentObj:		equ objoff_34			; pointer to main boss controller, also used for incrementing object routine to save RAM
+BossFinal_HitFlash:		equ objoff_35			; offset used to keep track of flashing frames (cylinder pointer overwrites the normally used offset of obBossFlash which is objoff_3E)
 BossFinal_PlasmaPtr:		equ objoff_36			; pointer to plasma ball object
 BossFinal_CylinderPtr:		equ objoff_38			; pointer to the start of the Cylinder address table, each entry is 2 bytes, so an 8 byte table ending at objoff_3F
-BossFinal_AttackState:		equ objoff_30			; offset used to store attack states so other sub-objects can see status
-BossFinal_ChildCmd:		equ objoff_29			; offset used to send command to child objects, treated as a one-shot (cleared right after command is sent)
-BossFinal_HitFlash:		equ objoff_35			; offset used to keep track of flashing frames (cylinder pointer overwrites the normally used offset of obBossFlash which is objoff_3E)
-BossFinal_ChildCounter:		equ objoff_32			; offset used to keep track of how many objects tied to the fight are still executing (for phase control). on the plasma launcher, -1 signifies the plasma phase is over
-BossFinal_EscapeTimer:		equ objoff_30			; offset used to play the hit sound, wait, and then start exploding as Eggman is fleeing
 ; ===========================================================================
 
 BossFinal_ObjData:
@@ -745,10 +745,10 @@ EggmanCylinder_Index:
 		dc.w EggmanCylinder_Action-EggmanCylinder_Index
 		dc.w EggmanCylinder_Move-EggmanCylinder_Index
 
+EggmanCylinder_HasEggman:	equ objoff_30			; offset used to denote which cylinder in the attacking pair Eggman is hiding in (-1 = Eggman present, 0 = decoy cylinder)
+EggmanCylinder_BaseY:		equ objoff_38			; offset used for the base Y position as a fixed-point value
 EggmanCylinder_Displacement:	equ objoff_3C			; offset used for a vertical displacement for the cylinder
 EggmanCylinder_FracDisplace:	equ objoff_3E			; offset that gets written to when doing vertical displacement, ends up being sub pixel values
-EggmanCylinder_BaseY:		equ objoff_38			; offset used for the base Y position as a fixed-point value
-EggmanCylinder_HasEggman:	equ objoff_30			; offset used to denote which cylinder in the attacking pair Eggman is hiding in (-1 = Eggman present, 0 = decoy cylinder)
 ; ===========================================================================
 
 EggmanCylinder_PosData:
@@ -983,8 +983,8 @@ BossPlasma_Index:
 		dc.w BossPlasma_Finish-BossPlasma_Index
 		dc.w BossPlasma_Balls-BossPlasma_Index
 
-BossPlasma_BallsAlive:		equ objoff_38			; offset used to keep track of how many plasma balls are still alive
 BossPlasma_TargetX:		equ objoff_30			; offset used to keep track of the target X position in each ball phase, re-used once to set up X spread offsets when first spawning
+BossPlasma_BallsAlive:		equ objoff_38			; offset used to keep track of how many plasma balls are still alive
 ; ===========================================================================
 
 BossPlasma_Main:	; Routine 0

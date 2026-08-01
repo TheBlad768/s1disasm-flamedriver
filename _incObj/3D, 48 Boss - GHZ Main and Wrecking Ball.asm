@@ -431,9 +431,9 @@ GBall_Index:	dc.w GBall_Main-GBall_Index
 
 GBall_AnchorPos:	equ objoff_32				; offset used to calculate position of chain anchor on Eggman's ship
 GBall_PosX:		equ objoff_3A				; parent ship X-position
+GBall_LinkDist:		equ objoff_3C				; each link's distance from the swing pivot
 GBall_Swing_Direction:	equ objoff_3D				; current swinging direction (0 = clockwise, 1 = counterclockwise)
 GBall_Swing_Speed:	equ objoff_3E				; current swing speed (direction flips on $200/-$200)
-GBall_LinkDist		equ objoff_3C				; each link's distance from the swing pivot
 ; ===========================================================================
 
 GBall_Main:	; Routine 0

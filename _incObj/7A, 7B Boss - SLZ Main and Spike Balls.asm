@@ -526,8 +526,9 @@ BossSpikeball_Index:
 		dc.w BossSpikeball_MoveFrag-BossSpikeball_Index
 ; ===========================================================================
 
-BossSpikeball_SeesawPtr		equ objoff_3C			; offset used to keep a pointer of the seesaw that the ball is tied to
-BossSpikeball_SeesawY		equ objoff_34			; offset to store seesaw Y
+BossSpikeball_SeesawY:		equ objoff_34			; offset to store seesaw Y
+BossSpikeball_SeesawPtr:	equ objoff_3C			; offset used to keep a pointer of the seesaw that the ball is tied to
+
 
 BossSpikeball_Main:	; Routine 0
 		move.l	#Map_SSawBall,obMap(a0)			; load mappings and art
