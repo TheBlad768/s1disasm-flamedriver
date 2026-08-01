@@ -19,7 +19,7 @@ BossSpringYard_ChildCmd:	equ objoff_29			; offset used to communicate commands t
 BossSpringYard_ParentObj:	equ objoff_34			; pointer to main boss controller
 BossSpringYard_BlockIndex:	equ objoff_34			; used to hold the block index Eggman is working with/hovering over (same offset, different alias)
 BossSpringYard_ObjPointer:	equ objoff_36			; pointer to memory address of spike object or block being grabbed. this is used as a general storage area for the boss controller object to send commands to, changing their behavior
-BossSpringYard_GenericTimer:	equ objoff_3C		; timer for how many frames to do an action, whether its wait for explosions, or to move in a direction. also used for vertical displacement of spike
+BossSpringYard_GenericTimer:	equ objoff_3C			; timer for how many frames to do an action, whether its wait for explosions, or to move in a direction. also used for vertical displacement of spike
 BossSpringYard_PhaseTimer:	equ objoff_3D			; lower byte of timer, used for shaking effect and also attack flag (memory optimization)
 BossSpringYard_SineCounter:	equ objoff_3F			; sine counter for bobbing motion
 ; ===========================================================================

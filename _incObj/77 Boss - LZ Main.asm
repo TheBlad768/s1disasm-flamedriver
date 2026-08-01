@@ -365,6 +365,9 @@ BLZ_Escape2:
 
 BossLabyrinth_ShipDel:
 	if FixBugs
+		; Make sure the palette doesn't get stuck on white if Eggman was hit as he was fleeing and leaving the screen
+		move.w #cBlack,(v_palette+$22).w
+
 		; Avoid returning to BossLabyrinth_ShipMain to prevent a
 		; display-and-delete bug.
 		addq.l	#4,sp
@@ -437,7 +440,7 @@ BossLabyrinth_FlameMain:; Routine 6
 	; This very simple bugfix restores the flame's visibility when starting the fight and ending the fight.
 	; The flame WILL NOT show up during the climb as Eggman writes to obX using the CalcSine subroutine to move (sine to move, cosine to check direction), rather than adjusting obVelX to move.
 	; It is ambiguous whether the flame was intended to show up or not during that part and it would require a large rewrite.
-	; This however definitely was a basic mistake as without the bugfix and additonal label, that code never gets executed at all.
+	; This however definitely was a basic mistake as without the bugfix and additional label, that code never gets executed at all.
 		bne.s	.checkMove				; if not, branch
 	else
 		bne.s	.skip

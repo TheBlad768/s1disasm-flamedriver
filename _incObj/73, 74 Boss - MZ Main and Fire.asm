@@ -17,7 +17,7 @@ BossMarble_Index:
 		dc.w BossMarble_TubeMain-BossMarble_Index
 
 BossFire_GenericTimer:	equ objoff_29				; timer used for fireball that is spawned by Eggman, as well as used for a counter
-BossFire_SpreadX:		equ objoff_32				; scratch RAM used to save X of where the first fireball hit
+BossFire_SpreadX:	equ objoff_32				; scratch RAM used to save X of where the first fireball hit
 BossMarble_ParentObj:	equ objoff_34 				; Pointer to main boss controller
 BossMarble_LavaTimer:	equ objoff_34				; countdown for lava spawn timer
 BossMarble_GenericTimer:equ objoff_3C				; timer for how many frames to do an action, whether its wait for explosions, or to move in a direction
