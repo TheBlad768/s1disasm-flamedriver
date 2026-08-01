@@ -21,6 +21,7 @@ BossSpringYard_ObjPointer:	equ objoff_36			; pointer to memory address of spike 
 BossSpringYard_GenericTimer:	equ objoff_3C			; timer for how many frames to do an action, whether its wait for explosions, or to move in a direction. also used for vertical displacement of spike
 BossSpringYard_PhaseTimer:	equ objoff_3D			; lower byte of timer, used for shaking effect and also attack flag (memory optimization)
 BossSpringYard_SineCounter:	equ objoff_3F			; sine counter for bobbing motion
+BossSpringYard_BlockIndex:	equ objoff_34			; used to hold the block index Eggman is working with/hovering over
 ; ===========================================================================
 
 BossSpringYard_ObjData:
@@ -120,7 +121,7 @@ BSYZ_StatusUpdate:
 		move.w	obX(a0),d0				; move x position
 		subi.w	#boss_syz_x,d0				; offset x position with start of boss area
 		lsr.w	#5,d0					; shift right 5 bits (divide by 32), this sets up the blocks that Eggman is going to look and see if he is over
-		move.b	d0,BossSpringYard_ParentObj(a0)		; move calculated value into the ParentObj offset, because this offset just points directly to itself, you can reuse this scratch RAM with no consequence
+		move.b	d0,BossSpringYard_BlockIndex(a0)	; move calculated value into offset
 		cmpi.b	#6,ob2ndRout(a0)			; are we exploding?
 		bhs.s	.exit					; yes, exit
 		tst.b	obStatus(a0)				; has Eggman's defeated flag been set (bit 7)?
@@ -205,10 +206,10 @@ BSYZ_ShipMove:
 		move.w	(v_player+obX).w,d1			; move Sonic's X position
 		subi.w	#boss_syz_x,d1				; subtract with boss bounds to create an offset
 		asr.w	#5,d1					; shift right 5 bits (divide by 32), keeping signed status
-		cmp.b	BossSpringYard_ParentObj(a0),d1		; are we on the same block as Sonic?
+		cmp.b	BossSpringYard_BlockIndex(a0),d1	; are we on the same block as Sonic?
 		bne.s	.exit					; if not, exit
 		moveq	#0,d0					; clear
-		move.b	BossSpringYard_ParentObj(a0),d0		; copy boss position
+		move.b	BossSpringYard_BlockIndex(a0),d0	; copy boss position
 		asl.w	#5,d0					; shift left 5 bits (multiply by 32), keeping signed status
 		addi.w	#boss_syz_x+$10,d0			; add 16 pixel offset and arena bounds to find exact center of block
 		move.w	d0,obBossX(a0)				; set position to center of block
@@ -408,7 +409,7 @@ BossSpringYard_FindBlocks:
 		moveq	#(v_objspace_end-(v_objspace+object_size*1))/object_size/2-1,d0	; Nonsensical length, it only covers the first half of object RAM.
 	endif
 		moveq	#id_BossBlock,d1			; set objectID for loop below
-		move.b	BossSpringYard_ParentObj(a0),d2		; copy index calculated up in StatusUpdate to d2 so d2 contains the block he is over
+		move.b	BossSpringYard_BlockIndex(a0),d2	; copy index calculated up in StatusUpdate to d2 so d2 contains the block he is over
 
 BossSpringYard_FindLoop:
 		cmp.b	obID(a1),d1				; is object a SYZ boss block?
@@ -697,7 +698,7 @@ BossSpringYard_SpikeMain:; Routine 8
 ; loc_19658:
 .applyPosition:
 		move.w	d0,BossSpringYard_GenericTimer(a0)	; copy back to offset for later
-		asr.w	#2,d0					; divide by 2
+		asr.w	#2,d0					; divide by 4
 		add.w	d0,obY(a0)				; add calculated position to Y
 		move.b	#16/2,obActWid(a0)			; set radius of object in pixels
 		move.b	#24/2,obHeight(a0)			; set height
@@ -792,7 +793,7 @@ BossBlock_Action:	; Routine 2
 		blo.s	BossBlock_Display			; the boss address is lower, meaning the boss has already moved, so just branch
 		move.w	obVelY(a1),d0				; the boss address is higher, Eggman has not been processed yet in the queue, so copy Y velocity
 		ext.l	d0					; long-extend velocity
-		asr.l	#8,d0					; divide by 8 to convert to pixels
+		asr.l	#8,d0					; divide by 256 to convert to pixels
 		add.w	d0,obY(a0)				; copy back to Y and try to predict where boss will be
 		bra.s	BossBlock_Display
 ; ===========================================================================

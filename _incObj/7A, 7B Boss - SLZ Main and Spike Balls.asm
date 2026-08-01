@@ -283,8 +283,8 @@ BSLZ_MakeBall:
 
 ; loc_18AFA:
 .checkForBall:
-		cmp.l	BossStarLight_GenericTimer(a1),d0 	; use same scratch RAM location as timer, however this is for a1 which is level object space and not a0 which is the boss object
-		beq.s	.abortDrop				; has any previously scanned object already point to this seesaw address? (on first loop, no! so this won't be true)
+		cmp.l	BossSpikeball_SeesawPtr(a1),d0 		; has any previously scanned object already pointed to this seesaw address? (on first loop, no! so this won't be true)
+		beq.s	.abortDrop				; if yes, branch
 		adda.w	#object_size,a1				; move the pointer forward one object size ($40 bytes, this means scanning all of the lvlobjspace to look for seesaws with balls)
 		dbf	d1,.checkForBall
 
@@ -298,7 +298,7 @@ BSLZ_MakeBall:
 		move.w	obY(a0),obY(a1)
 		addi.w	#$20,obY(a1)				; offset y so that it comes out of the ball launcher
 		move.b	obStatus(a2),obStatus(a1)		; copy seesaw status to ball
-		move.l	a2,BossStarLight_GenericTimer(a1)	; store seesaw's address so that seesaw and ball are now linked
+		move.l	a2,BossSpikeball_SeesawPtr(a1)		; store seesaw's address so that seesaw and ball are now linked
 
 ; loc_18B36:
 .subtractTime:
@@ -526,6 +526,9 @@ BossSpikeball_Index:
 		dc.w BossSpikeball_MoveFrag-BossSpikeball_Index
 ; ===========================================================================
 
+BossSpikeball_SeesawPtr		equ objoff_3C			; offset used to keep a pointer of the seesaw that the ball is tied to
+BossSpikeball_SeesawY		equ objoff_34			; offset to store seesaw Y
+
 BossSpikeball_Main:	; Routine 0
 		move.l	#Map_SSawBall,obMap(a0)			; load mappings and art
 		move.w	#ArtTile_Eggman_Spikeball,obGfx(a0)
@@ -534,9 +537,9 @@ BossSpikeball_Main:	; Routine 0
 		move.b	#4,obPriority(a0)			; set render priority (on the lower side)
 		move.b	#col_16x16|col_hurt,obColType(a0)	; set collision type
 		move.b	#24/2,obActWid(a0)			; set radius of object in pixels (used for hiding sprites when off-screen)
-		movea.l	BossStarLight_GenericTimer(a0),a1	; copy offset address, a1 now contains the seesaw that this ball is tied to
+		movea.l	BossSpikeball_SeesawPtr(a0),a1		; copy offset address, a1 now contains the seesaw that this ball is tied to
 		move.w	obX(a1),obBossX(a0)			; copy seesaw X to ball's base X
-		move.w	obY(a1),BossStarLight_ParentObj(a0)	; store seesaw Y (repurposed offset)
+		move.w	obY(a1),BossSpikeball_SeesawY(a0)	; store seesaw Y
 		bset	#0,obStatus(a0)				; flip ball on horizontal axis
 		move.w	obX(a0),d0				; copy ball's X
 		cmp.w	obX(a1),d0				; is the ball's X greater than the seesaw's X?
@@ -550,7 +553,7 @@ BossSpikeball_Main:	; Routine 0
 
 BossSpikeball_Fall:	; Routine 2
 		jsr	(ObjectFall).l
-		movea.l	BossStarLight_GenericTimer(a0),a1	; copy offset address, a1 now contains the seesaw that this ball is tied to
+		movea.l	BossSpikeball_SeesawPtr(a0),a1		; copy offset address, a1 now contains the seesaw that this ball is tied to
 		lea	(BossSpikeball_SeesawYOffset).l,a2	; load table for calculating what part of seesaw is pointing up/down
 		moveq	#0,d0
 		move.b	obFrame(a1),d0				; move current seesaw frame into d0
@@ -562,11 +565,11 @@ BossSpikeball_Fall:	; Routine 2
 ; loc_18D8E:
 .calculateOffset:
 		add.w	d0,d0					; add to create word-based index into the table
-		move.w	BossStarLight_ParentObj(a0),d1		; copy Y value originally stored at this offset
+		move.w	BossSpikeball_SeesawY(a0),d1		; copy Y value originally stored at this offset
 		add.w	(a2,d0.w),d1				; calculate table offset using word-based index and store
 		cmp.w	obY(a0),d1				; has the spikeball reached the seesaw?
 		bgt.s	.exit					; if not, branch and come back later
-		movea.l	BossStarLight_GenericTimer(a0),a1	; copy offset address, a1 now contains the seesaw that this ball is tied to
+		movea.l	BossSpikeball_SeesawPtr(a0),a1		; copy offset address, a1 now contains the seesaw that this ball is tied to
 		moveq	#2,d1
 		btst	#0,obStatus(a0)				; are we horizontally flipped (facing the right?)
 		beq.s	.landed					; if so, branch
@@ -587,7 +590,7 @@ BossSpikeball_Fall:	; Routine 2
 
 ; loc_18DC6:
 BossSpikeball_Bounce: ; Routine 4
-		movea.l	BossStarLight_GenericTimer(a0),a1	; copy offset address, a1 now contains the seesaw that this ball is tied to
+		movea.l	BossSpikeball_SeesawPtr(a0),a1		; copy offset address, a1 now contains the seesaw that this ball is tied to
 		moveq	#0,d0
 		move.b	BossStarLight_SeesawSide(a0),d0		; move spike ball's side value
 		sub.b	BossStarLight_SeesawSide(a1),d0		; subtract seesaw's side value with spike ball's value
@@ -640,7 +643,7 @@ BossSpikeball_CalcPos:
 ; loc_18E48:
 .setPos:
 		add.w	d0,d0					; add to create word-based index into the table
-		move.w	BossStarLight_ParentObj(a0),d1		; copy seesaw Y position
+		move.w	BossSpikeball_SeesawY(a0),d1		; copy seesaw Y position
 		add.w	(a2,d0.w),d1				; index into the table using calculated offset and Y position of seesaw
 		move.w	d1,obY(a0)				; set ball position based on seesaw index calculated
 		add.w	obBossX(a0),d2				; add seesaw position plus 40 pixel offset
@@ -774,7 +777,7 @@ BossSpikeball_CheckCollision:
 		tst.w	obVelY(a0)				; is the ball currently falling?
 		bpl.s	BossSpikeball_FallingDown		; if yes, branch
 		jsr	(ObjectFall).l
-		move.w	BossStarLight_ParentObj(a0),d0		; copy seesaw Y
+		move.w	BossSpikeball_SeesawY(a0),d0		; copy seesaw Y
 		subi.w	#$2F,d0					; subtract 47 pixels
 		cmp.w	obY(a0),d0				; is the ball resting on the seesaw?
 		bgt.s	BossSpikeball_Land			; if not, branch
@@ -787,7 +790,7 @@ BossSpikeball_Land:
 ; loc_18F5C:
 BossSpikeball_FallingDown:
 		jsr	(ObjectFall).l
-		movea.l	BossStarLight_GenericTimer(a0),a1	; copy offset address, a1 now contains the seesaw that this ball is tied to
+		movea.l	BossSpikeball_SeesawPtr(a0),a1		; copy offset address, a1 now contains the seesaw that this ball is tied to
 		lea	(BossSpikeball_SeesawYOffset).l,a2	; load seesaw Y offset table
 		moveq	#0,d0
 		move.b	obFrame(a1),d0				; copy seesaw frame
@@ -799,11 +802,11 @@ BossSpikeball_FallingDown:
 ; loc_18F7E:
 .checkSawCol:
 		add.w	d0,d0					; add to create word-based index into the table
-		move.w	BossStarLight_ParentObj(a0),d1		; copy seesaw Y
+		move.w	BossSpikeball_SeesawY(a0),d1		; copy seesaw Y
 		add.w	(a2,d0.w),d1				; index into the table using calculated offset and Y position of seesaw
 		cmp.w	obY(a0),d1				; has the spikeball reached the seesaw?
 		bgt.s	BossSpikeball_Land			; if not, branch and come back later
-		movea.l	BossStarLight_GenericTimer(a0),a1	; copy offset address, a1 now contains the seesaw that this ball is tied to
+		movea.l	BossSpikeball_SeesawPtr(a0),a1		; copy offset address, a1 now contains the seesaw that this ball is tied to
 		moveq	#2,d1
 		tst.w	obVelX(a0)				; is the ball currently moving to the left?
 		bmi.s	.setExplode				; if yes, branch
@@ -882,7 +885,7 @@ BossSpikeball_Explode:	; Routine 8
 ; ===========================================================================
 
 BossSpikeball_MakeFrag:
-		move.w	BossStarLight_ParentObj(a0),obY(a0)
+		move.w	BossSpikeball_SeesawY(a0),obY(a0)
 		moveq	#3,d1				; set up loop to loop 4 times
 		lea	BossSpikeball_FragSpeed(pc),a2
 
@@ -919,7 +922,7 @@ BossSpikeball_FragSpeed:
 BossSpikeball_MoveFrag:	; Routine $A
 		jsr	(SpeedToPos).l			; add calculated velocity values to X and Y
 		move.w	obX(a0),obBossX(a0)		; copy X and Y positions
-		move.w	obY(a0),BossStarLight_ParentObj(a0)
+		move.w	obY(a0),BossSpikeball_SeesawY(a0)
 		addi.w	#$18,obVelY(a0)			; start pulling the fragments downwards
 		moveq	#4,d0				; set up to use the third bit
 		and.w	(v_vblank_word).w,d0		; AND with the global vblank frame counter to get the status of the 3rd bit AKA every 4 frames

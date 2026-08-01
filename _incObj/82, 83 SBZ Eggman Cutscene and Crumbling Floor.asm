@@ -22,6 +22,8 @@ SEgg_Index:	dc.w SEgg_Main-SEgg_Index
 
 SEgg_ParentObj:		equ objoff_34				; pointer to main boss controller
 SEgg_GenericTimer:	equ objoff_3C				; timer for how many frames to wait before doing an action
+SEgg_ChildCmd:          equ obSubtype                           ; used to send basic commands, obSubtype is used but simply changed here for readability
+FFloor_BreakCount:      equ obFrame                             ; used to keep track of how many blocks have broken, obFrame is used but simply changed here for readability
 ; ===========================================================================
 
 SEgg_ObjData:	; routine number, animation, priority
@@ -50,7 +52,7 @@ SEgg_Main:	; Routine 0
 
 ; SEgg_ParentObj is used here as a reference back to the main boss controller.
 ; This is because when we are in ExecuteObjects, a0 is set to each object and sub objects own slot, so we need a way to find the original boss object.
-; This cutscene chooses not to loop, and instead copy it manually as there are only 2 things to load here
+; This cutscene chooses not to loop, and instead copy it manually as there are only 2 things to load here.
 		move.l	a0,SEgg_ParentObj(a1)
 		move.b	#id_ScrapEggman,obID(a1) 		; load switch object
 		move.w	#boss_sbz2_x+$E0,obX(a1)		; set position
@@ -128,7 +130,7 @@ SEgg_Leap:
 		bmi.s	.findBlocks				; if so, branch
 		cmpi.w	#boss_sbz2_y+$85,obY(a0)		; is Eggman above this Y offset?
 		blo.s	.findBlocks				; no, branch
-		move.w	#"SW",obSubtype(a0)			; use Subtype as a status offset
+		move.w	#"SW",SEgg_ChildCmd(a0)			; send command
 		cmpi.w	#boss_sbz2_y+$8B,obY(a0)		; has Eggman reached the floor?
 		blo.s	.findBlocks				; if not, branch
 		move.w	#boss_sbz2_y+$8B,obY(a0)		; snap to floor
@@ -158,7 +160,7 @@ SEgg_Leap:
 		dbeq	d0,.findLoop 				; if not, repeat (max $3E times)
 
 		bne.s	.exit					; no objects were found, so leave
-		move.w	#"GO",obSubtype(a1) 			; set block to disintegrate
+		move.w	#"GO",SEgg_ChildCmd(a1) 		; set block to disintegrate
 		addq.b	#2,ob2ndRout(a0)			; increment routine counter
 		move.b	#1,obAnim(a0)				; set animation routine
 
@@ -180,7 +182,7 @@ SEgg_SwIndex:	dc.w SEgg_SwChk-SEgg_SwIndex
 ; loc_199E6:
 SEgg_SwChk:
 		movea.l	SEgg_ParentObj(a0),a1
-		cmpi.w	#"SW",obSubtype(a1)			; has the switch been triggered?
+		cmpi.w	#"SW",SEgg_ChildCmd(a1)			; has the switch been triggered?
 		bne.s	SEgg_SwDisplay				; if not, branch
 		move.b	#1,obFrame(a0)				; set switch frame
 		addq.b	#2,ob2ndRout(a0)			; increment routine counter
@@ -250,25 +252,25 @@ FFloor_ExitMake:
 ; ===========================================================================
 
 FFloor_ChkBreak:; Routine 2
-		cmpi.w	#"GO",obSubtype(a0) 			; is object set to disintegrate?
+		cmpi.w	#"GO",SEgg_ChildCmd(a0) 		; is object set to disintegrate?
 		bne.s	FFloor_Solid				; if not, branch
-		clr.b	obFrame(a0)				; clear current break counter (not used for animations, see below)
+		clr.b	FFloor_BreakCount(a0)			; clear current break counter
 		addq.b	#2,obRoutine(a0) 			; next subroutine
 
 ; Rather than managing 8 separate collision boxes, the entire floor is treated
 ; as one solid surface that shrinks from the left as each block breaks.
-; obFrame tracks how many blocks have broken, which determines the remaining width.
+; FFloor_BreakCount (obFrame) tracks how many blocks have broken, which determines the remaining width.
 ; This allows for the bridge to have dynamically updating collision.
 
 FFloor_Solid:
 		moveq	#0,d0
-		move.b	obFrame(a0),d0				; copy current break counter
+		move.b	FFloor_BreakCount(a0),d0		; copy current break counter
 		neg.b	d0					; negate, then sign extend
 		ext.w	d0
 		addq.w	#8,d0					; calculate the number of blocks left to break
 		asl.w	#4,d0					; shift left 4 bits, this calculates the width of the remaining bridge
 		move.w	#boss_sbz2_x+$B0,d4			; set an anchor point on the right side
-		sub.w	d0,d4					; subtract anchor from remaining width/2 to get the center
+		sub.w	d0,d4					; subtract anchor minus remaining width/2 to get the center
 		move.b	d0,obActWid(a0)				; set object width to remaining width
 		move.w	d4,obX(a0)				; set object center location to width/2 of the bridge
 		moveq	#sonic_solid_width,d1			; copy Sonic's width
@@ -283,14 +285,14 @@ FFloor_Break:	; Routine 4
 		subi.b	#$E,obTimeFrame(a0)			; subtract 14 from frame duration counter (offset being repurposed)
 		bcc.s	.exit					; timer hasn't gone negative, so branch
 		moveq	#-1,d0					; set up d0
-		move.b	obFrame(a0),d0				; copy block break counter
+		move.b	FFloor_BreakCount(a0),d0		; copy block break counter
 		ext.w	d0					; extend this byte to a word
 		add.w	d0,d0					; double this word to create a word-based index (result: $FFFFXXXX)
 		move.w	FFloor_BlockListStart(a0,d0.w),d0	; use the index to move into the block list
 		movea.l	d0,a1					; copy calculated offset as an address
-		move.w	#"GO",obSubtype(a1)			; set block broken flag for block calculated from the list
-		addq.b	#1,obFrame(a0)				; increment frame
-		cmpi.b	#8,obFrame(a0)				; has the block disappeared?
+		move.w	#"GO",SEgg_ChildCmd(a1)			; set block broken flag for block calculated from the list
+		addq.b	#1,FFloor_BreakCount(a0)		; increment block
+		cmpi.b	#8,FFloor_BreakCount(a0)		; have all the blocks been broken?
 		beq.s	FFloor_AllGone				; if yes, branch
 
 ; FFloor_Solid2:
@@ -307,7 +309,7 @@ FFloor_AllGone:	; Routine 6
 
 ; loc_19C72:
 FFloor_Block:	; Routine 8
-		cmpi.w	#"GO",obSubtype(a0)			; is object set to disintegrate?
+		cmpi.w	#"GO",SEgg_ChildCmd(a0)			; is object set to disintegrate?
 		beq.s	FFloor_BlockBreak			; if yes, branch
 		jmp	(DisplaySprite).l
 ; ===========================================================================

@@ -44,9 +44,9 @@ BossLabyrinth_Main:	; Routine 0
 
 BossLabyrinth_Loop:
 		jsr	(FindNextFreeObj).l
-		bne.s	BossLabyrinth_ShipMain
-		_move.b	#id_BossLabyrinth,obID(a1)
-		move.w	obX(a0),obX(a1)
+		bne.s	BossLabyrinth_ShipMain			; no free objets found, branch
+		_move.b	#id_BossLabyrinth,obID(a1)		; set object ID
+		move.w	obX(a0),obX(a1)				; copy position
 		move.w	obY(a0),obY(a1)
 
 BossLabyrinth_LoadBoss:
@@ -237,7 +237,7 @@ BLZ_ShipMove3:
 
 ; loc_1806C:
 .trackDistance:
-		asr.w	#4,d0					; scale sine down (divide by 4)
+		asr.w	#4,d0					; scale sine down (divide by 16)
 		swap	d0					; move to high word
 		clr.w	d0					; clear lower word
 		add.l	obBossX(a0),d0				; add to boss X as a 32-bit fixed point
@@ -303,7 +303,7 @@ BLZ_ShipAtTop:
 ; loc_180F6:
 BLZ_ShipWait:
 		tst.b	BossLabyrinth_EarlyDefeatFlag(a0)	; has Eggman been defeated while ascending?
-		bne.s	.startEscape				; if not, branch
+		bne.s	.startEscape				; if yes, branch
 		cmpi.w	#boss_lz_x+$E8,obX(a1)			; has Sonic reached this horizontal check?
 		blt.s	.skip					; if not, branch
 		cmpi.w	#boss_lz_y+$30,obY(a1)			; has Sonic reached this vertical check?
@@ -328,7 +328,7 @@ BLZ_ShipWait:
 ; loc_1812A:
 BLZ_Escape1:
 		tst.b	BossLabyrinth_EarlyDefeatFlag(a0)	; has Eggman been defeated while ascending?
-		bne.s	.escape					; if not, branch
+		bne.s	.escape					; if yes, branch
 		subq.b	#1,BossLabyrinth_GenericTimer(a0)	; subtract 1 from timer
 		bne.s	.exit					; if timer is not 0, branch
 
@@ -412,7 +412,7 @@ BossLabyrinth_FaceMain:	; Routine 4
 		move.b	d1,obAnim(a0)				; move animation state so that animation can execute
 		cmpi.b	#$E,d0					; are we currently in Escape2?
 		bne.s	.skip					; if not, branch
-		move.b	#6,obAnim(a0)				; set animation to facenormal2
+		move.b	#6,obAnim(a0)				; set animation to facepanic
 		tst.b	obRender(a0)				; has Eggman's face left the screen?
 		bpl.s	BossLabyrinth_FaceDel			; yes, delete his face
 
@@ -431,12 +431,23 @@ BossLabyrinth_FlameMain:; Routine 6
 		cmp.b	(a0),d0					; does the flame have the same object ID as the boss (aka boss has been deleted offscreen)?
 		bne.s	BossLabyrinth_FlameDel			; if not, branch
 		cmpi.b	#$E,ob2ndRout(a1)			; are we currently in Escape2?
-		bne.s	.skip					; if not, branch
+	if FixBugs
+	; The normal flame animation never gets played here since they forgot to add a label for the horizontal movement check.
+	; So the boss branches and skips the last check, causing an invisible flame.
+	; This very simple bugfix restores the flame's visibility when starting the fight and ending the fight.
+	; The flame WILL NOT show up during the climb as Eggman writes to obX using the CalcSine subroutine to move (sine to move, cosine to check direction), rather than adjusting obVelX to move.
+	; It is ambiguous whether the flame was intended to show up or not during that part and it would require a large rewrite.
+	; This however definitely was a basic mistake as without the bugfix and additonal label, that code never gets executed at all.
+		bne.s	.checkMove				; if not, branch
+	else
+		bne.s	.skip
+	endif
 		move.b	#$B,obAnim(a0)				; set thruster animation for taking off
 		tst.b	obRender(a0)				; what is our screen status?
 		bpl.s	BossLabyrinth_FlameDel			; off screen, delete (bit 7 would be 1 if we were on screen, therefore a negative number due to sign)
 		bra.s	.skip					; on screen, display
 ; ===========================================================================
+.checkMove:
 		tst.w	obVelX(a1)				; are we currently moving?
 		beq.s	.skip					; no, don't display flame
 		move.b	#8,obAnim(a0)				; yes, display flame
