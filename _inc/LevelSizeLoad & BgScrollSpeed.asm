@@ -59,7 +59,6 @@ lvlsize macro left,right,top,bottom
 
 ; ---------------------------------------------------------------------------
 
-LevelSizeArray:
 		;           |---------------------------------Left boundary
 		;           |      |--------------------------Right boundary
 		;           |      |      |-------------------Top boundary
@@ -205,7 +204,7 @@ LevSz_InitBackgroundAndLoops:
 		lsl.b	#2,d0					; multiply by 4 bytes per loop chunk data entry
 		move.l	LoopChunkNums(pc,d0.w),(v_256loop1).w	; set loop chunk data for current zone
 
-	if (Revision=0)&(UnusedOptimization=0)
+	if Revision=0
 		bra.w	LevSz_LoadScrollBlockSize		; (REV00) setup scroll block sizes
 	else
 		rts						; (REV01) return, scroll block sizes have been deleted
@@ -258,10 +257,8 @@ StartLocArray:	binclude	"startpos/ghz1.bin"
 
 		binclude	"startpos/end1.bin"
 		binclude	"startpos/end2.bin"
-	if UnusedOptimization=0
 		unused_startloc
 		unused_startloc
-	endif
 
 ; ===========================================================================
 ; ---------------------------------------------------------------------------
@@ -282,7 +279,7 @@ LoopChunkNums:	; 	loop	loop	tunnel	tunnel
 ; ===========================================================================
 
 
-	if (Revision=0)&(UnusedOptimization=0)
+	if Revision=0
 ; ---------------------------------------------------------------------------
 ; Old (and mostly unused) scroll block definition system used in REV00.
 ; Each word represents a scroll block size, for example GHZ has $70 pixels
@@ -436,7 +433,6 @@ BgScroll_End:
 		move.w	#$1E,(v_bg2screenposy).w		; ''
 		rts						; return
 
-	if UnusedOptimization=0
 		; Dead code that also sets the BG X-positions.
 		; This may have been used during the development of the ending sequence
 		; to quickly spawn Sonic much closer to the left for convenience, as
@@ -448,7 +444,6 @@ BgScroll_End:
 		move.w	#$FFC0,(v_bg2screenposx).w		; hardcoded bottom BG X-position (bottom mounts/water)
 		move.w	#$1E,(v_bg2screenposy).w		; hardcoded BG Y-position
 		rts						; return
-	endif
 	else
 		move.w	(v_screenposx).w,d0			; get starting FG X-position
 		asr.w	#1,d0					; divide by 2
